@@ -1,0 +1,10 @@
+# 1. Client LLM pour l'extraction sémantique et la boucle de Self-Healing
+mistralai>=1.0.0
+# 2. Moteur de disposition géométrique (Eclipse Layout Kernel)
+pyelk>=0.1.0
+# 3. Validation formelle du schéma Logic-Core JSON
+jsonschema>=4.20.0
+# 4. Suite de tests automatisés
+pytest>=8.0.0
+# 5. Chargement des variables d'environnement depuis .env
+python-dotenv>=1.0.0

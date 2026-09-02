@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "logic-core.schema.json",
+  "title": "BPMN 2.0 Enterprise Logic-Core Schema",
+  "description": "Format JSON intermédiaire universel pour BPMN 2.0 inspiré de Stieges/bpmn-generator. Ne contient AUCUNE coordonnée spatiale (calculée par pyelk).",
+  "type": "object",
+  "required": ["process", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "process": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "name": { "type": "string" },
+        "documentation": { "type": "string" },
+        "isExecutable": { "type": "boolean", "default": true }
+      }
+    },
+    "pools": {
+      "type": "array",
+      "description": "Liste des pools / participants (pour les diagrammes de collaboration multi-acteurs).",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "processRef": { "type": "string" },
+          "collapsed": { "type": "boolean", "default": false },
+          "lanes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string" },
+                "name": { "type": "string" },
+                "documentation": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "startEvent",
+              "endEvent",
+              "intermediateCatchEvent",
+              "intermediateThrowEvent",
+              "boundaryEvent",
+              "task",
+              "userTask",
+              "serviceTask",
+              "scriptTask",
+              "manualTask",
+              "sendTask",
+              "receiveTask",
+              "businessRuleTask",
+              "callActivity",
+              "exclusiveGateway",
+              "parallelGateway",
+              "inclusiveGateway",
+              "eventBasedGateway",
+              "complexGateway",
+              "subProcess",
+              "dataObjectReference",
+              "dataStoreReference",
+              "textAnnotation"
+            ]
+          },
+          "name": { "type": "string" },
+          "poolId": {
+            "type": "string",
+            "description": "ID du pool auquel appartient ce nœud"
+          },
+          "laneId": {
+            "type": "string",
+            "description": "ID du couloir déclaré dans pools[].lanes"
+          },
+          "parentSubProcessId": {
+            "type": "string",
+            "description": "ID du subProcess parent si le nœud est imbriqué"
+          },
+          "attachedToRef": {
+            "type": "string",
+            "description": "Pour les boundaryEvents : ID de la tâche ou subProcess hôte"
+          },
+          "cancelActivity": {
+            "type": "boolean",
+            "default": true,
+            "description": "Pour boundaryEvents (interrupting ou non-interrupting)"
+          },
+          "eventDefinition": {
+            "type": "string",
+            "enum": [
+              "none",
+              "timer",
+              "message",
+              "error",
+              "signal",
+              "terminate",
+              "escalation",
+              "conditional",
+              "compensation"
+            ],
+            "default": "none",
+            "description": "Spécification du déclencheur d'événement BPMN"
+          },
+          "eventDetail": {
+            "type": "string",
+            "description": "Détail de l'événement (ex: durée timer 'PT15M', code erreur 'ERR_404', nom du message)"
+          },
+          "documentation": { "type": "string" },
+          "sourceProcessElement": { "type": "string" },
+          "gatewayDirection": {
+            "type": "string",
+            "enum": ["diverging", "converging", "mixed", "unspecified"],
+            "description": "Direction de la passerelle"
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source", "target", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "source": { "type": "string", "description": "ID du nœud source" },
+          "target": { "type": "string", "description": "ID du nœud cible" },
+          "type": {
+            "type": "string",
+            "enum": [
+              "sequenceFlow",
+              "messageFlow",
+              "association",
+              "dataInputAssociation",
+              "dataOutputAssociation"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Libellé de la branche ou du flux"
+          },
+          "condition": {
+            "type": "string",
+            "description": "Expression de garde (condition booléenne)"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "default": false,
+            "description": "Chemin par défaut sortant d'une passerelle"
+          },
+          "sourceProcessElement": {
+            "type": "string",
+            "description": "ID de l'élément Process Description à l'origine du flux"
+          }
+        }
+      }
+    }
+  }
+}

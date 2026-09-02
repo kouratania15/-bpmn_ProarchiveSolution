@@ -1,0 +1,33 @@
+# --- Secrets / environnement ---
+.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# --- Sorties / fichiers générés ---
+out/
+logs/
+reports/
+scratch/
+
+# --- Fichiers générés / exemples / expérimentations (pas du code essentiel) ---
+/*.bpmn
+/*.logic-core.json
+examples/
+experiment.json
+ANALYSIS_REPORT.md
+
+# --- Editeur / OS ---
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

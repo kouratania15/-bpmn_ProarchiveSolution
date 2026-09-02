@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "process-description.schema.json",
+  "title": "Process Description Schema",
+  "description": "Représentation intermédiaire structurée de la compréhension métier du processus",
+  "type": "object",
+  "required": [
+    "process_name",
+    "understanding_summary",
+    "identified_elements",
+    "gaps",
+    "confidence_level"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "process_name": {
+      "type": "string",
+      "description": "Nom du processus identifié"
+    },
+    "understanding_summary": {
+      "type": "string",
+      "description": "Résumé court de la compréhension du processus métier"
+    },
+    "identified_elements": {
+      "type": "object",
+      "required": [
+        "participants",
+        "activities",
+        "events",
+        "conditions",
+        "gateways"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "participants": {
+          "type": "array",
+          "description": "Acteurs/rôles/organisations impliqués",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_][a-z0-9_]*$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["actor", "system", "organization", "department"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "sourceAnalysisId": { "type": "string" },
+              "evidence": { "type": "string" },
+              "confidence": {
+                "type": "string",
+                "enum": ["explicit", "inferred", "structural"]
+              }
+            }
+          }
+        },
+        "activities": {
+          "type": "array",
+          "description": "Tâches/actions du processus",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "type", "sequence"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_][a-z0-9_]*$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["task", "manual_task", "automated_task", "subprocess"]
+              },
+              "actor_id": {
+                "type": "string",
+                "description": "ID du participant responsable"
+              },
+              "sequence": {
+                "type": "integer",
+                "description": "Position dans le flux (ordre)"
+              },
+              "description": {
+                "type": "string"
+              },
+              "sourceAnalysisId": { "type": "string" },
+              "evidence": { "type": "string" },
+              "source_text": { "type": "string" },
+              "confidence": {
+                "type": "string",
+                "enum": ["explicit", "inferred", "structural"]
+              }
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "description": "Événements significatifs du processus",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_][a-z0-9_]*$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "start",
+                  "end",
+                  "intermediate",
+                  "timer",
+                  "error",
+                  "message"
+                ]
+              },
+              "trigger": {
+                "type": "string",
+                "description": "Ce qui déclenche l'événement"
+              },
+              "sequence": {
+                "type": "integer",
+                "description": "Position approximative (optionnel)"
+              },
+              "sourceAnalysisId": { "type": "string" },
+              "evidence": { "type": "string" },
+              "confidence": {
+                "type": "string",
+                "enum": ["explicit", "inferred", "structural"]
+              }
+            }
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "description": "Conditions et décisions dans le processus",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition_text"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_][a-z0-9_]*$"
+              },
+              "condition_text": {
+                "type": "string",
+                "description": "Description textuelle de la condition"
+              },
+              "branches": {
+                "type": "array",
+                "description": "Branches résultantes",
+                "items": {
+                  "type": "object",
+                  "required": ["condition", "outcome"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "condition": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "description": "Activité ou événement résultant"
+                    }
+                  }
+                }
+              },
+              "sourceAnalysisId": { "type": "string" },
+              "evidence": { "type": "string" }
+            }
+          }
+        },
+        "gateways": {
+          "type": "array",
+          "description": "Points de décision/synchronisation explicites",
+          "items": {
+            "type": "object",
+            "required": ["id", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z_][a-z0-9_]*$"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["exclusive", "parallel", "inclusive"]
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "relations": {
+          "type": "array",
+          "description": "Relations métier explicitement présentes dans le texte",
+          "items": {
+            "type": "object",
+            "required": ["id", "source", "target", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*$" },
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "type": {
+                "type": "string",
+                "enum": ["sequence", "message", "association"]
+              },
+              "condition": { "type": "string" }
+            }
+          }
+        },
+        "sequence_flows": {
+          "type": "array",
+          "description": "Ordre ou enchaînements explicitement déduits du texte",
+          "items": {
+            "type": "object",
+            "required": ["source", "target"],
+            "additionalProperties": false,
+            "properties": {
+              "source": { "type": "string" },
+              "target": { "type": "string" },
+              "condition": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "description": "Informations manquantes ou ambigus identifiées",
+      "items": {
+        "type": "object",
+        "required": ["gap_id", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "gap_id": {
+            "type": "string",
+            "pattern": "^gap_[a-z0-9_]*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "related_element": {
+            "type": "string",
+            "description": "ID de l'élément concerné (optionnel)"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "important", "minor"],
+            "default": "important"
+          }
+        }
+      }
+    },
+    "confidence_level": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Niveau de confiance dans la compréhension"
+    },
+    "source_text_summary": {
+      "type": "string",
+      "description": "Résumé du texte d'entrée pour traçabilité"
+    }
+  }
+}

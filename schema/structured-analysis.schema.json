@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "structured-analysis.schema.json",
+  "title": "BPMN Structured Analysis Schema",
+  "type": "object",
+  "required": [
+    "participants",
+    "activities",
+    "events",
+    "conditions",
+    "relations",
+    "communications",
+    "gaps",
+    "structural_elements"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "participants": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/participant" }
+    },
+    "activities": { "type": "array", "items": { "$ref": "#/$defs/activity" } },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "conditions": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+    "relations": { "type": "array", "items": { "$ref": "#/$defs/relation" } },
+    "communications": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/communication" }
+    },
+    "gaps": { "type": "array", "items": { "$ref": "#/$defs/gap" } },
+    "structural_elements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/structural_element" }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": ["explicit", "inferred", "structural"]
+    },
+    "participant": {
+      "type": "object",
+      "required": ["id", "name", "evidence", "confidence"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^participant_[0-9]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] },
+        "confidence": {
+          "type": "string",
+          "enum": ["explicit", "inferred"]
+        }
+      }
+    },
+    "activity": {
+      "type": "object",
+      "required": ["id", "name", "evidence", "confidence", "type_candidate"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^activity_[0-9]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "actor": { "type": ["string", "null"] },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] },
+        "confidence": {
+          "type": "string",
+          "enum": ["explicit", "inferred"]
+        },
+        "type_candidate": {
+          "type": "string",
+          "enum": [
+            "task",
+            "userTask",
+            "serviceTask",
+            "sendTask",
+            "receiveTask",
+            "manualTask",
+            "businessRuleTask",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["id", "name", "event_type", "evidence", "confidence"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^event_[0-9]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "start",
+            "end",
+            "intermediate",
+            "timer",
+            "message",
+            "error",
+            "signal",
+            "cancellation"
+          ]
+        },
+        "trigger": { "type": ["string", "null"] },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "reason": { "type": ["string", "null"] }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "required": ["id", "condition", "evidence", "branches"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^condition_[0-9]+$" },
+        "condition": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "meaning"],
+            "additionalProperties": true,
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "meaning": { "type": "string", "minLength": 1 },
+              "source_text": { "type": ["string", "null"] },
+              "evidence": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": ["source", "target", "relation", "evidence"],
+      "additionalProperties": true,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "relation": {
+          "type": "string",
+          "enum": [
+            "before",
+            "after",
+            "if",
+            "else",
+            "when",
+            "parallel",
+            "message",
+            "wait",
+            "timeout"
+          ]
+        },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "required": ["id", "evidence"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^communication_[0-9]+$" },
+        "source": { "type": ["string", "null"] },
+        "target": { "type": ["string", "null"] },
+        "message": { "type": ["string", "null"] },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "required": ["id", "description", "severity", "reason", "evidence"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^gap_[0-9]+$" },
+        "description": { "type": "string", "minLength": 1 },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "affected_element": { "type": ["string", "null"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] }
+      }
+    },
+    "structural_element": {
+      "type": "object",
+      "required": ["id", "type", "confidence", "reason"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "pattern": "^structural_[0-9]+$" },
+        "type": {
+          "type": "string",
+          "enum": ["start_event", "end_event", "gateway", "join"]
+        },
+        "confidence": { "const": "structural" },
+        "reason": { "type": "string", "minLength": 1 },
+        "source_text": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
