@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_remboursement"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_demande_traitement" name="flow_demande_traitement" />
+  <bpmn:collaboration id="Collaboration_process_remboursement">
+    <bpmn:participant id="pool_assureur" name="Assureur" processRef="pool_assureur_process" />
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:messageFlow id="flow_demande_traitement" name="" sourceRef="task_client_depose_demande" targetRef="task_assureur_traitement_dossier" messageRef="Message_flow_demande_traitement" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_assureur_process" name="Assureur" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_contrat" name="Vérification du contrat">
+      </bpmn:lane>
+      <bpmn:lane id="lane_dommages" name="Évaluation des dommages">
+      </bpmn:lane>
+      <bpmn:lane id="lane_validation" name="Validation par superviseur">
+      </bpmn:lane>
+      <bpmn:lane id="lane_remboursement" name="Envoi du remboursement">
+        <bpmn:flowNodeRef>task_envoyer_remboursement</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:subProcess id="task_assureur_traitement_dossier" name="Traitement du dossier">
+      <bpmn:outgoing>flow_traitement_remboursement</bpmn:outgoing>
+      <bpmn:startEvent id="start_event_traitement" name="Début du traitement du dossier">
+        <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_assureur&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+        <bpmn:outgoing>flow_start_verification</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="task_verifier_contrat" name="Vérifier le contrat">
+        <bpmn:incoming>flow_start_verification</bpmn:incoming>
+        <bpmn:outgoing>flow_verification_dommages</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_evaluer_dommages" name="Évaluer le montant des dommages">
+        <bpmn:incoming>flow_verification_dommages</bpmn:incoming>
+        <bpmn:outgoing>flow_dommages_validation</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_valider_superviseur" name="Validation par un superviseur">
+        <bpmn:incoming>flow_dommages_validation</bpmn:incoming>
+        <bpmn:outgoing>flow_validation_traitement</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="end_event_traitement" name="Traitement du dossier terminé">
+        <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_assureur&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+        <bpmn:incoming>flow_validation_traitement</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="flow_start_verification" name="" sourceRef="start_event_traitement" targetRef="task_verifier_contrat">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_verification_dommages" name="" sourceRef="task_verifier_contrat" targetRef="task_evaluer_dommages">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_dommages_validation" name="" sourceRef="task_evaluer_dommages" targetRef="task_valider_superviseur">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_validation_traitement" name="" sourceRef="task_valider_superviseur" targetRef="end_event_traitement">
+      </bpmn:sequenceFlow>
+    </bpmn:subProcess>
+    <bpmn:task id="task_envoyer_remboursement" name="Envoyer le remboursement au client">
+      <bpmn:incoming>flow_traitement_remboursement</bpmn:incoming>
+      <bpmn:outgoing>flow_remboursement_fin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_remboursement" name="Remboursement envoyé au client">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_assureur&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_remboursement_fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_traitement_remboursement" name="" sourceRef="task_assureur_traitement_dossier" targetRef="task_envoyer_remboursement">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_remboursement_fin" name="" sourceRef="task_envoyer_remboursement" targetRef="end_event_remboursement">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_event_demande" name="Demande de remboursement déposée">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_client&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_demande</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_client_depose_demande" name="Client dépose une demande de remboursement">
+      <bpmn:incoming>flow_start_demande</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_demande" name="" sourceRef="start_event_demande" targetRef="task_client_depose_demande">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_remboursement">
+      <bpmndi:BPMNShape id="pool_assureur_di" bpmnElement="pool_assureur" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1416" height="670" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="760" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_contrat_di" bpmnElement="lane_contrat" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="1386" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_dommages_di" bpmnElement="lane_dommages" isHorizontal="true">
+        <dc:Bounds x="90" y="210" width="1386" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_validation_di" bpmnElement="lane_validation" isHorizontal="true">
+        <dc:Bounds x="90" y="370" width="1386" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_remboursement_di" bpmnElement="lane_remboursement" isHorizontal="true">
+        <dc:Bounds x="90" y="530" width="1386" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_demande_di" bpmnElement="start_event_demande">
+        <dc:Bounds x="120" y="800" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_client_depose_demande_di" bpmnElement="task_client_depose_demande">
+        <dc:Bounds x="280" y="800" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_assureur_traitement_dossier_di" bpmnElement="task_assureur_traitement_dossier" isExpanded="true">
+        <dc:Bounds x="440" y="80" width="756" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_traitement_di" bpmnElement="start_event_traitement">
+        <dc:Bounds x="480" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verifier_contrat_di" bpmnElement="task_verifier_contrat">
+        <dc:Bounds x="640" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_dommages_di" bpmnElement="task_evaluer_dommages">
+        <dc:Bounds x="800" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_valider_superviseur_di" bpmnElement="task_valider_superviseur">
+        <dc:Bounds x="960" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_traitement_di" bpmnElement="end_event_traitement">
+        <dc:Bounds x="1120" y="130" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_envoyer_remboursement_di" bpmnElement="task_envoyer_remboursement">
+        <dc:Bounds x="1196" y="570" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_remboursement_di" bpmnElement="end_event_remboursement">
+        <dc:Bounds x="1356" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_demande_di" bpmnElement="flow_start_demande">
+        <di:waypoint x="156" y="818" />
+        <di:waypoint x="218" y="818" />
+        <di:waypoint x="218" y="840" />
+        <di:waypoint x="280" y="840" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_start_verification_di" bpmnElement="flow_start_verification">
+        <di:waypoint x="516" y="148" />
+        <di:waypoint x="578" y="148" />
+        <di:waypoint x="578" y="170" />
+        <di:waypoint x="640" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verification_dommages_di" bpmnElement="flow_verification_dommages">
+        <di:waypoint x="740" y="170" />
+        <di:waypoint x="800" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_dommages_validation_di" bpmnElement="flow_dommages_validation">
+        <di:waypoint x="900" y="170" />
+        <di:waypoint x="960" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validation_traitement_di" bpmnElement="flow_validation_traitement">
+        <di:waypoint x="1060" y="170" />
+        <di:waypoint x="1090" y="170" />
+        <di:waypoint x="1090" y="148" />
+        <di:waypoint x="1120" y="148" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_traitement_remboursement_di" bpmnElement="flow_traitement_remboursement">
+        <di:waypoint x="1196" y="160" />
+        <di:waypoint x="1226" y="160" />
+        <di:waypoint x="1226" y="670" />
+        <di:waypoint x="1166" y="670" />
+        <di:waypoint x="1166" y="610" />
+        <di:waypoint x="1196" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_remboursement_fin_di" bpmnElement="flow_remboursement_fin">
+        <di:waypoint x="1296" y="610" />
+        <di:waypoint x="1326" y="610" />
+        <di:waypoint x="1326" y="98" />
+        <di:waypoint x="1356" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_demande_traitement_di" bpmnElement="flow_demande_traitement">
+        <di:waypoint x="380" y="840" />
+        <di:waypoint x="410" y="840" />
+        <di:waypoint x="410" y="160" />
+        <di:waypoint x="440" y="160" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

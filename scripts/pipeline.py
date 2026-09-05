@@ -90,6 +90,7 @@ def run_pipeline(
     run_id = generate_run_id()
     total_steps = 8
     business_summary: dict[str, Any] = {}
+    process_desc: dict[str, Any] | None = None
     try:
         log_event(run_id, ActionType.ANALYSIS, "input", "success",
                   output={"user_text": user_text, "source_artifact": direct_logic_core is not None})
@@ -206,6 +207,9 @@ def run_pipeline(
             })
 
         attempt = 0
+        prev_error_count = len(val_res.errors)
+        stopped_no_progress = False
+        regenerated_once = False
         while not val_res.ok and attempt < max_heal_attempts and direct_logic_core is None:
             attempt += 1
             if verbose:
@@ -255,9 +259,80 @@ def run_pipeline(
                 attempt=attempt,
             )
 
+            # Coupe-circuit : si le nombre d'erreurs ne diminue pas d'une tentative à
+            # l'autre, la boucle ne converge pas — continuer ne fait que muter la
+            # structure au hasard (voire l'aggraver) plutôt que de la corriger.
+            # Signaler un échec explicite maintenant plutôt que d'épuiser les
+            # tentatives restantes sans progrès.
+            if not val_res.ok and len(val_res.errors) >= prev_error_count:
+                # Une structure qui ne progresse plus est souvent bancale à sa racine
+                # (ex: un acteur jamais détecté à la génération initiale) : rafistoler
+                # indéfiniment un Logic-Core déjà mal formé ne fait qu'empiler des
+                # corrections ad hoc sans jamais converger. Avant d'abandonner, on
+                # retourne UNE FOIS à la génération initiale depuis le Process
+                # Description pour redétecter les acteurs/participants — un nouvel
+                # essai de génération complet plutôt qu'un énième rafistolage.
+                if process_desc is not None and not regenerated_once:
+                    regenerated_once = True
+                    if verbose:
+                        print_trace(5, total_steps,
+                                     f"Self-healing sans progrès à la tentative {attempt} — retour à la "
+                                     "génération initiale du Logic-Core (redétection des acteurs)", "WARNING")
+                    append_execution_trace(run_id, {
+                        "step": 4,
+                        "attempt": attempt,
+                        "component": "llm_agent.generate_logic_core_from_pd",
+                        "action": "SELF_HEALING_NO_PROGRESS_REGENERATE",
+                        "prev_error_count": prev_error_count,
+                        "new_error_count": len(val_res.errors),
+                    })
+                    logic_core = generate_logic_core_from_pd(process_desc, run_id=run_id, model=model)
+                    logic_core = dict(logic_core)
+                    val_res = validate_logic_core(logic_core, source_text=user_text if direct_logic_core is None else None)
+                    if val_res.normalized_logic_core is not None:
+                        logic_core = val_res.normalized_logic_core
+                    business_summary = print_business_summary(logic_core, step="Régénération", attempt=attempt)
+                    log_event(
+                        run_id, ActionType.DEBUG, "logic_core_regeneration",
+                        "success" if val_res.ok else "failed",
+                        output_response=json.dumps(logic_core, ensure_ascii=False),
+                        errors=val_res.errors or None,
+                        attempt=attempt,
+                    )
+                    attempt = 0
+                    prev_error_count = len(val_res.errors)
+                    continue
+
+                stopped_no_progress = True
+                append_execution_trace(run_id, {
+                    "step": 4,
+                    "attempt": attempt,
+                    "component": "llm_agent.self_heal_logic_core",
+                    "action": "SELF_HEALING_NO_PROGRESS_STOP",
+                    "prev_error_count": prev_error_count,
+                    "new_error_count": len(val_res.errors),
+                })
+                if verbose:
+                    print_trace(5, total_steps,
+                                 f"Self-healing arrêté : aucune amélioration à la tentative {attempt} "
+                                 f"({prev_error_count} -> {len(val_res.errors)} erreurs)", "ERROR")
+                break
+            prev_error_count = len(val_res.errors)
+
         if not val_res.ok:
             set_final_experiment_summary(run_id, business_summary, status="FAILED")
-            raise ValueError(f"Logic-Core invalide apres {attempt} corrections : {val_res.errors}")
+            reason = "aucune amélioration détectée entre deux tentatives" if stopped_no_progress else f"{attempt} corrections"
+            raise ValueError(f"Logic-Core invalide apres {reason} : {val_res.errors}")
+
+        # Les avertissements (non bloquants : GAPs métier, données mentionnées dans
+        # le texte mais absentes du Logic-Core, etc.) étaient calculés par le
+        # validateur mais jamais affichés — une omission silencieuse. On les
+        # affiche toujours, succès ou non, pour ne rien perdre discrètement.
+        if val_res.warnings:
+            log_event(run_id, ActionType.DEBUG, "logic_core_warnings", "warning", errors=val_res.warnings)
+            if verbose:
+                for w in val_res.warnings:
+                    print_trace(4, total_steps, f"Avertissement : {w}", "WARNING")
 
         if verbose:
             print_trace(6, total_steps, "Calcul du layout géométrique")

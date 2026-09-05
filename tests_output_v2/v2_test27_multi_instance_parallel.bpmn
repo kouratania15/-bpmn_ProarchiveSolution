@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_evaluation_projet"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_evaluation_projet">
+    <bpmn:participant id="pool_jury" name="Jury d&#x27;experts" processRef="process_evaluation_projet" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_evaluation_projet" name="Jury d&#x27;experts" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_expert_1" name="Expert 1">
+        <bpmn:flowNodeRef>task_evaluer_projet_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_examiner_projet_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_attribuer_note_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_classer_projet</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_expert_2" name="Expert 2">
+        <bpmn:flowNodeRef>task_evaluer_projet_2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_examiner_projet_2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_attribuer_note_2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_expert_3" name="Expert 3">
+        <bpmn:flowNodeRef>task_evaluer_projet_3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_examiner_projet_3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_attribuer_note_3</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_expert_4" name="Expert 4">
+        <bpmn:flowNodeRef>task_evaluer_projet_4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_examiner_projet_4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_attribuer_note_4</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_event" name="Début du processus d&#x27;évaluation">
+      <bpmn:outgoing>flow_start_parallel</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_evaluer_projet_1" name="Évaluer le projet">
+      <bpmn:incoming>flow_parallel_evaluer_1</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluer_examiner_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_examiner_projet_1" name="Examiner le projet indépendamment">
+      <bpmn:incoming>flow_evaluer_examiner_1</bpmn:incoming>
+      <bpmn:outgoing>flow_examiner_attribuer_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_attribuer_note_1" name="Attribuer une note">
+      <bpmn:incoming>flow_examiner_attribuer_1</bpmn:incoming>
+      <bpmn:outgoing>flow_attribuer_join_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluer_projet_2" name="Évaluer le projet">
+      <bpmn:incoming>flow_parallel_evaluer_2</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluer_examiner_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_examiner_projet_2" name="Examiner le projet indépendamment">
+      <bpmn:incoming>flow_evaluer_examiner_2</bpmn:incoming>
+      <bpmn:outgoing>flow_examiner_attribuer_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_attribuer_note_2" name="Attribuer une note">
+      <bpmn:incoming>flow_examiner_attribuer_2</bpmn:incoming>
+      <bpmn:outgoing>flow_attribuer_join_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluer_projet_3" name="Évaluer le projet">
+      <bpmn:incoming>flow_parallel_evaluer_3</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluer_examiner_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_examiner_projet_3" name="Examiner le projet indépendamment">
+      <bpmn:incoming>flow_evaluer_examiner_3</bpmn:incoming>
+      <bpmn:outgoing>flow_examiner_attribuer_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_attribuer_note_3" name="Attribuer une note">
+      <bpmn:incoming>flow_examiner_attribuer_3</bpmn:incoming>
+      <bpmn:outgoing>flow_attribuer_join_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluer_projet_4" name="Évaluer le projet">
+      <bpmn:incoming>flow_parallel_evaluer_4</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluer_examiner_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_examiner_projet_4" name="Examiner le projet indépendamment">
+      <bpmn:incoming>flow_evaluer_examiner_4</bpmn:incoming>
+      <bpmn:outgoing>flow_examiner_attribuer_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_attribuer_note_4" name="Attribuer une note">
+      <bpmn:incoming>flow_examiner_attribuer_4</bpmn:incoming>
+      <bpmn:outgoing>flow_attribuer_join_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="parallel_gateway" name="Déclenchement parallèle des évaluations">
+      <bpmn:documentation>Justifié par le texte : &#x27;Chaque expert examine le projet indépendamment et attribue une note en parallèle.&#x27;</bpmn:documentation>
+      <bpmn:incoming>flow_start_parallel</bpmn:incoming>
+      <bpmn:outgoing>flow_parallel_evaluer_1</bpmn:outgoing>
+      <bpmn:outgoing>flow_parallel_evaluer_2</bpmn:outgoing>
+      <bpmn:outgoing>flow_parallel_evaluer_3</bpmn:outgoing>
+      <bpmn:outgoing>flow_parallel_evaluer_4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:parallelGateway id="parallel_join_gateway" name="Synchronisation des notes des experts">
+      <bpmn:incoming>flow_attribuer_join_1</bpmn:incoming>
+      <bpmn:incoming>flow_attribuer_join_2</bpmn:incoming>
+      <bpmn:incoming>flow_attribuer_join_3</bpmn:incoming>
+      <bpmn:incoming>flow_attribuer_join_4</bpmn:incoming>
+      <bpmn:outgoing>flow_join_classer</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="task_classer_projet" name="Classer le projet">
+      <bpmn:incoming>flow_join_classer</bpmn:incoming>
+      <bpmn:outgoing>flow_classer_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event" name="Classement finalisé">
+      <bpmn:incoming>flow_classer_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_parallel" name="" sourceRef="start_event" targetRef="parallel_gateway">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_evaluer_1" name="" sourceRef="parallel_gateway" targetRef="task_evaluer_projet_1">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_evaluer_examiner_1" name="" sourceRef="task_evaluer_projet_1" targetRef="task_examiner_projet_1">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_examiner_attribuer_1" name="" sourceRef="task_examiner_projet_1" targetRef="task_attribuer_note_1">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_evaluer_2" name="" sourceRef="parallel_gateway" targetRef="task_evaluer_projet_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_evaluer_examiner_2" name="" sourceRef="task_evaluer_projet_2" targetRef="task_examiner_projet_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_examiner_attribuer_2" name="" sourceRef="task_examiner_projet_2" targetRef="task_attribuer_note_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_evaluer_3" name="" sourceRef="parallel_gateway" targetRef="task_evaluer_projet_3">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_evaluer_examiner_3" name="" sourceRef="task_evaluer_projet_3" targetRef="task_examiner_projet_3">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_examiner_attribuer_3" name="" sourceRef="task_examiner_projet_3" targetRef="task_attribuer_note_3">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_evaluer_4" name="" sourceRef="parallel_gateway" targetRef="task_evaluer_projet_4">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_evaluer_examiner_4" name="" sourceRef="task_evaluer_projet_4" targetRef="task_examiner_projet_4">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_examiner_attribuer_4" name="" sourceRef="task_examiner_projet_4" targetRef="task_attribuer_note_4">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_attribuer_join_1" name="" sourceRef="task_attribuer_note_1" targetRef="parallel_join_gateway">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_attribuer_join_2" name="" sourceRef="task_attribuer_note_2" targetRef="parallel_join_gateway">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_attribuer_join_3" name="" sourceRef="task_attribuer_note_3" targetRef="parallel_join_gateway">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_attribuer_join_4" name="" sourceRef="task_attribuer_note_4" targetRef="parallel_join_gateway">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_join_classer" name="" sourceRef="parallel_join_gateway" targetRef="task_classer_projet">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_classer_end" name="" sourceRef="task_classer_projet" targetRef="end_event">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_evaluation_projet">
+      <bpmndi:BPMNShape id="pool_jury_di" bpmnElement="pool_jury" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1300" height="760" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_expert_1_di" bpmnElement="lane_expert_1" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="1270" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_expert_2_di" bpmnElement="lane_expert_2" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="1270" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_expert_3_di" bpmnElement="lane_expert_3" isHorizontal="true">
+        <dc:Bounds x="90" y="430" width="1270" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_expert_4_di" bpmnElement="lane_expert_4" isHorizontal="true">
+        <dc:Bounds x="90" y="620" width="1270" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_projet_1_di" bpmnElement="task_evaluer_projet_1">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_examiner_projet_1_di" bpmnElement="task_examiner_projet_1">
+        <dc:Bounds x="600" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_attribuer_note_1_di" bpmnElement="task_attribuer_note_1">
+        <dc:Bounds x="760" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_projet_2_di" bpmnElement="task_evaluer_projet_2">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_examiner_projet_2_di" bpmnElement="task_examiner_projet_2">
+        <dc:Bounds x="600" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_attribuer_note_2_di" bpmnElement="task_attribuer_note_2">
+        <dc:Bounds x="760" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_projet_3_di" bpmnElement="task_evaluer_projet_3">
+        <dc:Bounds x="440" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_examiner_projet_3_di" bpmnElement="task_examiner_projet_3">
+        <dc:Bounds x="600" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_attribuer_note_3_di" bpmnElement="task_attribuer_note_3">
+        <dc:Bounds x="760" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_projet_4_di" bpmnElement="task_evaluer_projet_4">
+        <dc:Bounds x="440" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_examiner_projet_4_di" bpmnElement="task_examiner_projet_4">
+        <dc:Bounds x="600" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_attribuer_note_4_di" bpmnElement="task_attribuer_note_4">
+        <dc:Bounds x="760" y="660" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="parallel_gateway_di" bpmnElement="parallel_gateway">
+        <dc:Bounds x="280" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="parallel_join_gateway_di" bpmnElement="parallel_join_gateway">
+        <dc:Bounds x="920" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_classer_projet_di" bpmnElement="task_classer_projet">
+        <dc:Bounds x="1080" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_di" bpmnElement="end_event">
+        <dc:Bounds x="1240" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_parallel_di" bpmnElement="flow_start_parallel">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="105" />
+        <di:waypoint x="280" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_evaluer_1_di" bpmnElement="flow_parallel_evaluer_1">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_examiner_1_di" bpmnElement="flow_evaluer_examiner_1">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="600" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_examiner_attribuer_1_di" bpmnElement="flow_examiner_attribuer_1">
+        <di:waypoint x="700" y="130" />
+        <di:waypoint x="760" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_evaluer_2_di" bpmnElement="flow_parallel_evaluer_2">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="320" />
+        <di:waypoint x="440" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_examiner_2_di" bpmnElement="flow_evaluer_examiner_2">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="600" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_examiner_attribuer_2_di" bpmnElement="flow_examiner_attribuer_2">
+        <di:waypoint x="700" y="320" />
+        <di:waypoint x="760" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_evaluer_3_di" bpmnElement="flow_parallel_evaluer_3">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="510" />
+        <di:waypoint x="440" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_examiner_3_di" bpmnElement="flow_evaluer_examiner_3">
+        <di:waypoint x="540" y="510" />
+        <di:waypoint x="600" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_examiner_attribuer_3_di" bpmnElement="flow_examiner_attribuer_3">
+        <di:waypoint x="700" y="510" />
+        <di:waypoint x="760" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_evaluer_4_di" bpmnElement="flow_parallel_evaluer_4">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="700" />
+        <di:waypoint x="440" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_examiner_4_di" bpmnElement="flow_evaluer_examiner_4">
+        <di:waypoint x="540" y="700" />
+        <di:waypoint x="600" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_examiner_attribuer_4_di" bpmnElement="flow_examiner_attribuer_4">
+        <di:waypoint x="700" y="700" />
+        <di:waypoint x="760" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_attribuer_join_1_di" bpmnElement="flow_attribuer_join_1">
+        <di:waypoint x="860" y="130" />
+        <di:waypoint x="890" y="130" />
+        <di:waypoint x="890" y="105" />
+        <di:waypoint x="920" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_attribuer_join_2_di" bpmnElement="flow_attribuer_join_2">
+        <di:waypoint x="860" y="320" />
+        <di:waypoint x="890" y="320" />
+        <di:waypoint x="890" y="105" />
+        <di:waypoint x="920" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_attribuer_join_3_di" bpmnElement="flow_attribuer_join_3">
+        <di:waypoint x="860" y="510" />
+        <di:waypoint x="890" y="510" />
+        <di:waypoint x="890" y="105" />
+        <di:waypoint x="920" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_attribuer_join_4_di" bpmnElement="flow_attribuer_join_4">
+        <di:waypoint x="860" y="700" />
+        <di:waypoint x="890" y="700" />
+        <di:waypoint x="890" y="105" />
+        <di:waypoint x="920" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_join_classer_di" bpmnElement="flow_join_classer">
+        <di:waypoint x="970" y="105" />
+        <di:waypoint x="1025" y="105" />
+        <di:waypoint x="1025" y="130" />
+        <di:waypoint x="1080" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_classer_end_di" bpmnElement="flow_classer_end">
+        <di:waypoint x="1180" y="130" />
+        <di:waypoint x="1210" y="130" />
+        <di:waypoint x="1210" y="98" />
+        <di:waypoint x="1240" y="98" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

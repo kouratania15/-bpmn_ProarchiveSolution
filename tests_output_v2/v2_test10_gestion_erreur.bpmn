@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_print_document"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_user_task_to_printer_task" name="flow_user_task_to_printer_task" />
+  <bpmn:collaboration id="Collaboration_process_print_document">
+    <bpmn:participant id="pool_user" name="Utilisateur" processRef="pool_user_process" />
+    <bpmn:participant id="pool_printer" name="Système (Imprimante)" processRef="pool_printer_process" />
+    <bpmn:messageFlow id="flow_user_task_to_printer_task" name="" sourceRef="task_user_launch_print" targetRef="task_printer_process_request" messageRef="Message_flow_user_task_to_printer_task" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_user_process" name="Utilisateur" isExecutable="true">
+    <bpmn:startEvent id="start_event_print" name="Début de l&#x27;impression">
+      <bpmn:outgoing>flow_start_to_user_task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_user_launch_print" name="Lancer l&#x27;impression du document">
+      <bpmn:incoming>flow_start_to_user_task</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_user_task" name="" sourceRef="start_event_print" targetRef="task_user_launch_print">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_printer_process" name="Système (Imprimante)" isExecutable="true">
+    <bpmn:task id="task_printer_process_request" name="Traiter la demande d&#x27;impression">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_printer&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_printer_task_to_successful_print</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="boundary_event_paper_error" name="Erreur de papier" attachedToRef="task_printer_process_request" cancelActivity="true">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_printer&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_printer_task_to_cancel_print</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="boundary_event_paper_error_def">
+      </bpmn:errorEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="task_printer_cancel_print" name="Annuler l&#x27;impression">
+      <bpmn:incoming>flow_printer_task_to_cancel_print</bpmn:incoming>
+      <bpmn:outgoing>flow_cancel_print_to_display_error</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_printer_display_error_message" name="Afficher un message d&#x27;erreur">
+      <bpmn:incoming>flow_cancel_print_to_display_error</bpmn:incoming>
+      <bpmn:outgoing>flow_display_error_to_end_event</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_printer_successful_print" name="Imprimer le document avec succès">
+      <bpmn:incoming>flow_printer_task_to_successful_print</bpmn:incoming>
+      <bpmn:outgoing>flow_successful_print_to_end_event</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_success" name="Impression terminée avec succès">
+      <bpmn:incoming>flow_successful_print_to_end_event</bpmn:incoming>
+      <bpmn:incoming>flow_display_error_to_end_event</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_printer_task_to_successful_print" name="" sourceRef="task_printer_process_request" targetRef="task_printer_successful_print">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_successful_print_to_end_event" name="" sourceRef="task_printer_successful_print" targetRef="end_event_success">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_printer_task_to_cancel_print" name="" sourceRef="boundary_event_paper_error" targetRef="task_printer_cancel_print">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_cancel_print_to_display_error" name="" sourceRef="task_printer_cancel_print" targetRef="task_printer_display_error_message">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_display_error_to_end_event" name="" sourceRef="task_printer_display_error_message" targetRef="end_event_success">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_print_document">
+      <bpmndi:BPMNShape id="pool_user_di" bpmnElement="pool_user" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_printer_di" bpmnElement="pool_printer" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="800" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_print_di" bpmnElement="start_event_print">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_user_launch_print_di" bpmnElement="task_user_launch_print">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_printer_process_request_di" bpmnElement="task_printer_process_request">
+        <dc:Bounds x="440" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="boundary_event_paper_error_di" bpmnElement="boundary_event_paper_error">
+        <dc:Bounds x="522" y="382" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_printer_cancel_print_di" bpmnElement="task_printer_cancel_print">
+        <dc:Bounds x="120" y="430" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_printer_display_error_message_di" bpmnElement="task_printer_display_error_message">
+        <dc:Bounds x="280" y="540" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_printer_successful_print_di" bpmnElement="task_printer_successful_print">
+        <dc:Bounds x="600" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_success_di" bpmnElement="end_event_success">
+        <dc:Bounds x="440" y="540" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_user_task_di" bpmnElement="flow_start_to_user_task">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_printer_task_to_successful_print_di" bpmnElement="flow_printer_task_to_successful_print">
+        <di:waypoint x="540" y="360" />
+        <di:waypoint x="600" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_successful_print_to_end_event_di" bpmnElement="flow_successful_print_to_end_event">
+        <di:waypoint x="700" y="360" />
+        <di:waypoint x="730" y="360" />
+        <di:waypoint x="730" y="618" />
+        <di:waypoint x="410" y="618" />
+        <di:waypoint x="410" y="558" />
+        <di:waypoint x="440" y="558" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_printer_task_to_cancel_print_di" bpmnElement="flow_printer_task_to_cancel_print">
+        <di:waypoint x="540" y="418" />
+        <di:waypoint x="570" y="418" />
+        <di:waypoint x="570" y="530" />
+        <di:waypoint x="90" y="530" />
+        <di:waypoint x="90" y="470" />
+        <di:waypoint x="120" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_cancel_print_to_display_error_di" bpmnElement="flow_cancel_print_to_display_error">
+        <di:waypoint x="220" y="470" />
+        <di:waypoint x="250" y="470" />
+        <di:waypoint x="250" y="580" />
+        <di:waypoint x="280" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_display_error_to_end_event_di" bpmnElement="flow_display_error_to_end_event">
+        <di:waypoint x="380" y="580" />
+        <di:waypoint x="410" y="580" />
+        <di:waypoint x="410" y="558" />
+        <di:waypoint x="440" y="558" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_user_task_to_printer_task_di" bpmnElement="flow_user_task_to_printer_task">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="440" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

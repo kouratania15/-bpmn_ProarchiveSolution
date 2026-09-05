@@ -1,0 +1,180 @@
+{
+  "process": {
+    "id": "process_reservation_cancellation",
+    "name": "Processus de réservation et annulation de chambre",
+    "documentation": "Processus de gestion des réservations de chambre avec possibilité d'annulation par le client à tout moment."
+  },
+  "pools": [
+    {
+      "id": "pool_hotel",
+      "name": "Hôtel",
+      "lanes": []
+    },
+    {
+      "id": "pool_client",
+      "name": "Client"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reservation",
+      "type": "startEvent",
+      "name": "Début du traitement de la réservation",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_hotel"
+    },
+    {
+      "id": "task_process_reservation",
+      "type": "task",
+      "name": "Traiter une réservation de chambre",
+      "poolId": "pool_hotel",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "intermediate_cancel_event",
+      "type": "intermediateCatchEvent",
+      "name": "Annulation de la réservation",
+      "eventDefinition": "message",
+      "eventDetail": "Annulation par le client",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_client' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "subprocess_cancellation",
+      "type": "subProcess",
+      "name": "Annuler une réservation",
+      "poolId": "pool_hotel",
+      "triggeredByEvent": true,
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "start_cancellation_subprocess",
+      "type": "startEvent",
+      "name": "Début du sous-processus d'annulation",
+      "eventDefinition": "none",
+      "parentSubProcessId": "subprocess_cancellation",
+      "poolId": "pool_hotel"
+    },
+    {
+      "id": "task_refund_client",
+      "type": "task",
+      "name": "Rembourser le client",
+      "poolId": "pool_hotel",
+      "parentSubProcessId": "subprocess_cancellation",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_release_room",
+      "type": "task",
+      "name": "Libérer la chambre",
+      "poolId": "pool_hotel",
+      "parentSubProcessId": "subprocess_cancellation",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_cancellation_subprocess",
+      "type": "endEvent",
+      "name": "Fin du sous-processus d'annulation",
+      "eventDefinition": "none",
+      "parentSubProcessId": "subprocess_cancellation",
+      "poolId": "pool_hotel"
+    },
+    {
+      "id": "end_reservation_processed",
+      "type": "endEvent",
+      "name": "Réservation traitée avec succès",
+      "eventDefinition": "none",
+      "poolId": "pool_hotel"
+    },
+    {
+      "id": "gateway_cancellation_check",
+      "type": "exclusiveGateway",
+      "name": "Vérification d'annulation",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_hotel",
+      "sourceProcessElement": "gateway_1"
+    },
+    {
+      "id": "task_notify_cancellation",
+      "type": "task",
+      "name": "Notifier l'annulation au système de l'hôtel",
+      "poolId": "pool_hotel",
+      "sourceProcessElement": "activity_5"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_process",
+      "source": "start_reservation",
+      "target": "task_process_reservation",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_process_to_gateway",
+      "source": "task_process_reservation",
+      "target": "gateway_cancellation_check",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_gateway_to_notify",
+      "source": "gateway_cancellation_check",
+      "target": "task_notify_cancellation",
+      "type": "sequenceFlow",
+      "name": "Annulation détectée",
+      "condition": "Le client annule sa réservation",
+      "sourceProcessElement": "sequence_flows"
+    },
+    {
+      "id": "flow_notify_to_cancel_event",
+      "source": "task_notify_cancellation",
+      "target": "intermediate_cancel_event",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_cancel_to_subprocess",
+      "source": "intermediate_cancel_event",
+      "target": "subprocess_cancellation",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_start_cancel_to_refund",
+      "source": "start_cancellation_subprocess",
+      "target": "task_refund_client",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_refund_to_release",
+      "source": "task_refund_client",
+      "target": "task_release_room",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_release_to_end_cancel",
+      "source": "task_release_room",
+      "target": "end_cancellation_subprocess",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_cancel_subprocess_to_main",
+      "source": "subprocess_cancellation",
+      "target": "end_reservation_processed",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_processed",
+      "source": "gateway_cancellation_check",
+      "target": "end_reservation_processed",
+      "type": "sequenceFlow",
+      "name": "Pas d'annulation",
+      "isDefault": true
+    }
+  ]
+}

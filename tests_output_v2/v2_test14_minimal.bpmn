@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_ouvrir_porte"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:process id="process_ouvrir_porte" name="Processus d&#x27;ouverture de porte par le vigile" isExecutable="true">
+    <bpmn:startEvent id="start_event_ouvrir_porte" name="Début du processus d&#x27;ouverture de porte">
+      <bpmn:outgoing>flow_start_task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_ouvrir_porte" name="Le vigile ouvre la porte">
+      <bpmn:documentation>Action principale décrite explicitement dans le texte source.</bpmn:documentation>
+      <bpmn:incoming>flow_start_task</bpmn:incoming>
+      <bpmn:outgoing>flow_task_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_porte_ouverte" name="Porte ouverte">
+      <bpmn:documentation>Événement de fin implicite pour marquer la fin du processus après l&#x27;action du vigile.</bpmn:documentation>
+      <bpmn:incoming>flow_task_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_task" name="Début du processus" sourceRef="start_event_ouvrir_porte" targetRef="task_ouvrir_porte">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_task_end" name="Porte ouverte" sourceRef="task_ouvrir_porte" targetRef="end_event_porte_ouverte">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process_ouvrir_porte">
+      <bpmndi:BPMNShape id="start_event_ouvrir_porte_di" bpmnElement="start_event_ouvrir_porte">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_ouvrir_porte_di" bpmnElement="task_ouvrir_porte">
+        <dc:Bounds x="280" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_porte_ouverte_di" bpmnElement="end_event_porte_ouverte">
+        <dc:Bounds x="440" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_task_di" bpmnElement="flow_start_task">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="120" />
+        <di:waypoint x="280" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="198" y="100" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_task_end_di" bpmnElement="flow_task_end">
+        <di:waypoint x="380" y="120" />
+        <di:waypoint x="410" y="120" />
+        <di:waypoint x="410" y="98" />
+        <di:waypoint x="440" y="98" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="78" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

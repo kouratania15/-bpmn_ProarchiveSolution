@@ -1,0 +1,182 @@
+{
+  "process": {
+    "id": "process_order_preparation",
+    "name": "Processus de commande et préparation de plat en ligne",
+    "documentation": "Processus où un visiteur commande un plat en ligne. Le restaurant vérifie la disponibilité des ingrédients et le mode de paiement, puis prépare ou annule la commande en conséquence."
+  },
+  "pools": [
+    {
+      "id": "pool_visitor",
+      "name": "Visiteur",
+      "collapsed": false
+    },
+    {
+      "id": "pool_restaurant",
+      "name": "Restaurant",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_received_order",
+      "type": "startEvent",
+      "name": "Commande reçue",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_visitor"
+    },
+    {
+      "id": "task_visitor_orders_dish",
+      "type": "task",
+      "name": "Commander un plat en ligne",
+      "poolId": "pool_visitor",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_restaurant_checks_ingredients",
+      "type": "task",
+      "name": "Vérifier la disponibilité des ingrédients",
+      "poolId": "pool_restaurant",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_restaurant' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_ingredients_available",
+      "type": "exclusiveGateway",
+      "name": "Tous les ingrédients disponibles ?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "condition_1",
+      "poolId": "pool_restaurant"
+    },
+    {
+      "id": "task_restaurant_cancel_order_missing_ingredients",
+      "type": "task",
+      "name": "Annuler la commande (ingrédient manquant)",
+      "poolId": "pool_restaurant",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_restaurant_check_payment_method",
+      "type": "task",
+      "name": "Vérifier le mode de paiement",
+      "poolId": "pool_restaurant",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "gateway_payment_accepted",
+      "type": "exclusiveGateway",
+      "name": "Paiement accepté ?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "condition_2",
+      "poolId": "pool_restaurant"
+    },
+    {
+      "id": "task_restaurant_prepare_dish",
+      "type": "task",
+      "name": "Préparer le plat",
+      "poolId": "pool_restaurant",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "task_restaurant_cancel_order_payment_refused",
+      "type": "task",
+      "name": "Annuler la commande (paiement refusé)",
+      "poolId": "pool_restaurant",
+      "sourceProcessElement": "activity_6"
+    },
+    {
+      "id": "end_event_order_finalized",
+      "type": "endEvent",
+      "name": "Commande finalisée (préparation réussie)",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_4",
+      "poolId": "pool_restaurant"
+    },
+    {
+      "id": "end_event_order_cancelled_missing_ingredients",
+      "type": "endEvent",
+      "name": "Commande annulée (ingrédient manquant)",
+      "eventDefinition": "none",
+      "poolId": "pool_restaurant"
+    },
+    {
+      "id": "end_event_order_cancelled_payment_refused",
+      "type": "endEvent",
+      "name": "Commande annulée (paiement refusé)",
+      "eventDefinition": "none",
+      "poolId": "pool_restaurant"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_visitor_order",
+      "source": "start_event_received_order",
+      "target": "task_visitor_orders_dish",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_visitor_order_to_check_ingredients",
+      "source": "task_visitor_orders_dish",
+      "target": "task_restaurant_checks_ingredients",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_check_ingredients_to_gateway",
+      "source": "task_restaurant_checks_ingredients",
+      "target": "gateway_ingredients_available",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_ingredients_no_to_cancel_order",
+      "source": "gateway_ingredients_available",
+      "target": "task_restaurant_cancel_order_missing_ingredients",
+      "type": "sequenceFlow",
+      "name": "Non"
+    },
+    {
+      "id": "flow_cancel_missing_ingredients_to_end",
+      "source": "task_restaurant_cancel_order_missing_ingredients",
+      "target": "end_event_order_cancelled_missing_ingredients",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_ingredients_yes_to_check_payment",
+      "source": "gateway_ingredients_available",
+      "target": "task_restaurant_check_payment_method",
+      "type": "sequenceFlow",
+      "name": "Oui"
+    },
+    {
+      "id": "flow_check_payment_to_gateway",
+      "source": "task_restaurant_check_payment_method",
+      "target": "gateway_payment_accepted",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_payment_yes_to_prepare_dish",
+      "source": "gateway_payment_accepted",
+      "target": "task_restaurant_prepare_dish",
+      "type": "sequenceFlow",
+      "name": "Oui"
+    },
+    {
+      "id": "flow_prepare_dish_to_end",
+      "source": "task_restaurant_prepare_dish",
+      "target": "end_event_order_finalized",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_payment_no_to_cancel_order",
+      "source": "gateway_payment_accepted",
+      "target": "task_restaurant_cancel_order_payment_refused",
+      "type": "sequenceFlow",
+      "name": "Non"
+    },
+    {
+      "id": "flow_cancel_payment_refused_to_end",
+      "source": "task_restaurant_cancel_order_payment_refused",
+      "target": "end_event_order_cancelled_payment_refused",
+      "type": "sequenceFlow"
+    }
+  ]
+}

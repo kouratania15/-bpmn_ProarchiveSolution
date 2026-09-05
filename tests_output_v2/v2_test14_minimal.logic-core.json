@@ -1,0 +1,50 @@
+{
+  "process": {
+    "id": "process_ouvrir_porte",
+    "name": "Processus d'ouverture de porte par le vigile",
+    "isExecutable": true,
+    "documentation": "Processus simple déclenché par l'action du vigile ouvrant la porte. Aucune condition, événement ou acteur externe n'est mentionné."
+  },
+  "pools": [],
+  "nodes": [
+    {
+      "id": "start_event_ouvrir_porte",
+      "type": "startEvent",
+      "name": "Début du processus d'ouverture de porte",
+      "eventDefinition": "none",
+      "sourceProcessElement": "start_event"
+    },
+    {
+      "id": "task_ouvrir_porte",
+      "type": "task",
+      "name": "Le vigile ouvre la porte",
+      "documentation": "Action principale décrite explicitement dans le texte source.",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "end_event_porte_ouverte",
+      "type": "endEvent",
+      "name": "Porte ouverte",
+      "eventDefinition": "none",
+      "documentation": "Événement de fin implicite pour marquer la fin du processus après l'action du vigile."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_task",
+      "source": "start_event_ouvrir_porte",
+      "target": "task_ouvrir_porte",
+      "type": "sequenceFlow",
+      "name": "Début du processus",
+      "sourceProcessElement": "start_event"
+    },
+    {
+      "id": "flow_task_end",
+      "source": "task_ouvrir_porte",
+      "target": "end_event_porte_ouverte",
+      "type": "sequenceFlow",
+      "name": "Porte ouverte",
+      "sourceProcessElement": "activity_1"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "process": {
+    "id": "process_print_document",
+    "name": "Processus d'impression d'un document",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_user",
+      "name": "Utilisateur",
+      "collapsed": false
+    },
+    {
+      "id": "pool_printer",
+      "name": "Système (Imprimante)",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_print",
+      "type": "startEvent",
+      "name": "Début de l'impression",
+      "eventDefinition": "none",
+      "poolId": "pool_user"
+    },
+    {
+      "id": "task_user_launch_print",
+      "type": "task",
+      "name": "Lancer l'impression du document",
+      "poolId": "pool_user",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_printer_process_request",
+      "type": "task",
+      "name": "Traiter la demande d'impression",
+      "poolId": "pool_printer",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_printer' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "boundary_event_paper_error",
+      "type": "boundaryEvent",
+      "name": "Erreur de papier",
+      "eventDefinition": "error",
+      "attachedToRef": "task_printer_process_request",
+      "cancelActivity": true,
+      "sourceProcessElement": "event_2",
+      "poolId": "pool_printer",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_printer' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_printer_cancel_print",
+      "type": "task",
+      "name": "Annuler l'impression",
+      "poolId": "pool_printer",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_printer_display_error_message",
+      "type": "task",
+      "name": "Afficher un message d'erreur",
+      "poolId": "pool_printer",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_printer_successful_print",
+      "type": "task",
+      "name": "Imprimer le document avec succès",
+      "poolId": "pool_printer",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "end_event_success",
+      "type": "endEvent",
+      "name": "Impression terminée avec succès",
+      "eventDefinition": "none",
+      "poolId": "pool_printer",
+      "sourceProcessElement": "event_3"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_user_task",
+      "source": "start_event_print",
+      "target": "task_user_launch_print",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_user_task_to_printer_task",
+      "source": "task_user_launch_print",
+      "target": "task_printer_process_request",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_printer_task_to_successful_print",
+      "source": "task_printer_process_request",
+      "target": "task_printer_successful_print",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_successful_print_to_end_event",
+      "source": "task_printer_successful_print",
+      "target": "end_event_success",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_printer_task_to_cancel_print",
+      "source": "boundary_event_paper_error",
+      "target": "task_printer_cancel_print",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_cancel_print_to_display_error",
+      "source": "task_printer_cancel_print",
+      "target": "task_printer_display_error_message",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_display_error_to_end_event",
+      "source": "task_printer_display_error_message",
+      "target": "end_event_success",
+      "type": "sequenceFlow"
+    }
+  ]
+}

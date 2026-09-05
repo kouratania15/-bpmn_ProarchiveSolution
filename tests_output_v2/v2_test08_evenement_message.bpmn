@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_verification_virement"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_verification_virement">
+    <bpmn:participant id="pool_entreprise" name="Entreprise" processRef="process_verification_virement" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_verification_virement" name="Entreprise" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_comptable" name="Comptable">
+        <bpmn:flowNodeRef>task_verifier_montant</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gateway_montant_conforme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_envoyer_contestation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>end_processus_termine</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>end_contestation_envoyee</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_banque_partenaire" name="Banque partenaire">
+        <bpmn:flowNodeRef>start_notification_virement</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_notification_virement" name="Notification de virement reçu">
+      <bpmn:outgoing>flow_start_verification</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="start_notification_virement_def">
+      </bpmn:messageEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:task id="task_verifier_montant" name="Vérifier le montant reçu">
+      <bpmn:incoming>flow_start_verification</bpmn:incoming>
+      <bpmn:outgoing>flow_verification_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_montant_conforme" name="Montant conforme ?" default="flow_montant_conforme">
+      <bpmn:incoming>flow_verification_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_montant_conforme</bpmn:outgoing>
+      <bpmn:outgoing>flow_montant_non_conforme</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="task_envoyer_contestation" name="Envoyer un message de contestation à la banque partenaire">
+      <bpmn:incoming>flow_montant_non_conforme</bpmn:incoming>
+      <bpmn:outgoing>flow_contestation_envoyee</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="end_processus_termine" name="Processus terminé (montant conforme)">
+      <bpmn:incoming>flow_montant_conforme</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_contestation_envoyee" name="Contestation envoyée (montant non conforme)">
+      <bpmn:incoming>flow_contestation_envoyee</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_verification" name="" sourceRef="start_notification_virement" targetRef="task_verifier_montant">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_verification_gateway" name="" sourceRef="task_verifier_montant" targetRef="gateway_montant_conforme">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_montant_conforme" name="Montant conforme" sourceRef="gateway_montant_conforme" targetRef="end_processus_termine">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_montant_non_conforme" name="Montant non conforme" sourceRef="gateway_montant_conforme" targetRef="task_envoyer_contestation">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">le montant ne correspond pas à la facture</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_contestation_envoyee" name="" sourceRef="task_envoyer_contestation" targetRef="end_contestation_envoyee">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_verification_virement">
+      <bpmndi:BPMNShape id="pool_entreprise_di" bpmnElement="pool_entreprise" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="916" height="460" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_comptable_di" bpmnElement="lane_comptable" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="886" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_banque_partenaire_di" bpmnElement="lane_banque_partenaire" isHorizontal="true">
+        <dc:Bounds x="90" y="350" width="886" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_notification_virement_di" bpmnElement="start_notification_virement">
+        <dc:Bounds x="120" y="390" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verifier_montant_di" bpmnElement="task_verifier_montant">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_montant_conforme_di" bpmnElement="gateway_montant_conforme">
+        <dc:Bounds x="440" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_envoyer_contestation_di" bpmnElement="task_envoyer_contestation">
+        <dc:Bounds x="600" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_processus_termine_di" bpmnElement="end_processus_termine">
+        <dc:Bounds x="600" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_contestation_envoyee_di" bpmnElement="end_contestation_envoyee">
+        <dc:Bounds x="760" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_verification_di" bpmnElement="flow_start_verification">
+        <di:waypoint x="156" y="408" />
+        <di:waypoint x="218" y="408" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verification_gateway_di" bpmnElement="flow_verification_gateway">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="115" />
+        <di:waypoint x="440" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_montant_conforme_di" bpmnElement="flow_montant_conforme">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="108" />
+        <di:waypoint x="600" y="108" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="88" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_montant_non_conforme_di" bpmnElement="flow_montant_non_conforme">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="240" />
+        <di:waypoint x="600" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="220" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_contestation_envoyee_di" bpmnElement="flow_contestation_envoyee">
+        <di:waypoint x="700" y="240" />
+        <di:waypoint x="730" y="240" />
+        <di:waypoint x="730" y="108" />
+        <di:waypoint x="760" y="108" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

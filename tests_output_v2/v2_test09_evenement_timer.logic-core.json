@@ -1,0 +1,136 @@
+{
+  "process": {
+    "id": "process_commande",
+    "name": "Processus de préparation et expédition de commande",
+    "documentation": "Processus de réception, préparation et expédition d'une commande avec alerte en cas de dépassement du délai de 48h."
+  },
+  "pools": [
+    {
+      "id": "pool_fournisseur",
+      "name": "Fournisseur",
+      "lanes": []
+    },
+    {
+      "id": "pool_responsable_achats",
+      "name": "Responsable des achats",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_commande_recue",
+      "type": "startEvent",
+      "name": "Commande reçue",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_fournisseur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_fournisseur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_recevoir_commande",
+      "type": "task",
+      "name": "Recevoir une commande",
+      "poolId": "pool_fournisseur",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_preparer_commande",
+      "type": "task",
+      "name": "Préparer une commande",
+      "poolId": "pool_fournisseur",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_expedier_commande",
+      "type": "task",
+      "name": "Expédier une commande",
+      "poolId": "pool_fournisseur",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "timer_48h",
+      "type": "boundaryEvent",
+      "name": "Dépassement délai d'expédition",
+      "eventDefinition": "timer",
+      "eventDetail": "PT48H",
+      "attachedToRef": "task_expedier_commande",
+      "cancelActivity": true,
+      "sourceProcessElement": "event_2",
+      "poolId": "pool_responsable_achats",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_responsable_achats' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_envoyer_alarme",
+      "type": "sendTask",
+      "name": "Envoyer une alerte",
+      "poolId": "pool_responsable_achats",
+      "sourceProcessElement": "activity_4",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_responsable_achats' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_commande_expediee",
+      "type": "endEvent",
+      "name": "Commande expédiée sous délai",
+      "eventDefinition": "none",
+      "poolId": "pool_fournisseur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_fournisseur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_commande_retard",
+      "type": "endEvent",
+      "name": "Commande non expédiée à temps",
+      "eventDefinition": "none",
+      "poolId": "pool_responsable_achats",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_responsable_achats' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_recevoir",
+      "source": "start_commande_recue",
+      "target": "task_recevoir_commande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_recevoir_preparer",
+      "source": "task_recevoir_commande",
+      "target": "task_preparer_commande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_preparer_expedier",
+      "source": "task_preparer_commande",
+      "target": "task_expedier_commande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_expedier_end_succes",
+      "source": "task_expedier_commande",
+      "target": "end_commande_expediee",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_timer_alarme",
+      "source": "timer_48h",
+      "target": "task_envoyer_alarme",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_alarme_end_retard",
+      "source": "task_envoyer_alarme",
+      "target": "end_commande_retard",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_expedier_alarme",
+      "source": "task_expedier_commande",
+      "target": "end_commande_retard",
+      "type": "messageFlow",
+      "name": "Dépassement délai"
+    }
+  ]
+}

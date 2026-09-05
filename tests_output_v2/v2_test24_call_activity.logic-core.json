@@ -1,0 +1,125 @@
+{
+  "process": {
+    "id": "process_leave_request",
+    "name": "Processus de gestion des demandes de congé",
+    "documentation": "Processus de réception, validation hiérarchique et confirmation des demandes de congé par le service RH.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_rh",
+      "name": "Service des Ressources Humaines (RH)",
+      "lanes": []
+    },
+    {
+      "id": "pool_system",
+      "name": "Système informatique",
+      "collapsed": true
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_receive_leave_request",
+      "type": "startEvent",
+      "name": "Demande de congé reçue",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_receive_leave_request",
+      "type": "task",
+      "name": "Recevoir une demande de congé",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_call_hierarchy_validation",
+      "type": "serviceTask",
+      "name": "Appeler le processus standard de validation hiérarchique",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_hierarchy_validation",
+      "type": "subProcess",
+      "name": "Validation hiérarchique",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "start_event_hierarchy_validation",
+      "type": "startEvent",
+      "name": "Début de la validation hiérarchique",
+      "eventDefinition": "none",
+      "parentSubProcessId": "task_hierarchy_validation",
+      "sourceProcessElement": "event_2",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_hierarchy_validation",
+      "type": "endEvent",
+      "name": "Validation hiérarchique obtenue",
+      "eventDefinition": "none",
+      "parentSubProcessId": "task_hierarchy_validation",
+      "sourceProcessElement": "event_2",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_confirm_leave_to_employee",
+      "type": "task",
+      "name": "Confirmer le congé à l'employé",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_event_leave_confirmed",
+      "type": "endEvent",
+      "name": "Congé confirmé à l'employé",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_3",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_receive_request",
+      "source": "start_event_receive_leave_request",
+      "target": "task_receive_leave_request",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_receive_call_validation",
+      "source": "task_receive_leave_request",
+      "target": "task_call_hierarchy_validation",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_call_validation_subprocess",
+      "source": "task_call_hierarchy_validation",
+      "target": "task_hierarchy_validation",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_subprocess_end",
+      "source": "task_hierarchy_validation",
+      "target": "task_confirm_leave_to_employee",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_confirm_leave_end",
+      "source": "task_confirm_leave_to_employee",
+      "target": "end_event_leave_confirmed",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_006"
+    }
+  ]
+}

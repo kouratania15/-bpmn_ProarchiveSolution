@@ -1,0 +1,154 @@
+{
+  "process": {
+    "id": "process_preparation_lancement",
+    "name": "Préparation du lancement d'un produit",
+    "isExecutable": true,
+    "documentation": "Processus de préparation du lancement d'un produit par une agence de communication. Les tâches peuvent être réalisées en parallèle selon la disponibilité des équipes."
+  },
+  "pools": [
+    {
+      "id": "pool_agence_communication",
+      "name": "Agence de communication",
+      "lanes": [
+        {
+          "id": "lane_redaction",
+          "name": "Rédaction"
+        },
+        {
+          "id": "lane_design",
+          "name": "Design"
+        },
+        {
+          "id": "lane_relations",
+          "name": "Relations publiques"
+        },
+        {
+          "id": "lane_developpement",
+          "name": "Développement web"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_preparation",
+      "type": "startEvent",
+      "name": "Début de la préparation du lancement",
+      "eventDefinition": "none",
+      "poolId": "pool_agence_communication"
+    },
+    {
+      "id": "gateway_parallel",
+      "type": "parallelGateway",
+      "name": "Démarrage des tâches parallèles",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_agence_communication",
+      "documentation": "GAP: parallélisme explicite conservé; la normalisation ne doit pas inventer de décision exclusive sans preuve métier."
+    },
+    {
+      "id": "task_rediger_communique",
+      "type": "task",
+      "name": "Rédiger le communiqué de presse",
+      "poolId": "pool_agence_communication",
+      "laneId": "lane_redaction"
+    },
+    {
+      "id": "task_concevoir_visuels",
+      "type": "task",
+      "name": "Concevoir les visuels publicitaires",
+      "poolId": "pool_agence_communication",
+      "laneId": "lane_design"
+    },
+    {
+      "id": "task_contacter_influenceurs",
+      "type": "task",
+      "name": "Contacter les influenceurs",
+      "poolId": "pool_agence_communication",
+      "laneId": "lane_relations"
+    },
+    {
+      "id": "task_preparer_page_vente",
+      "type": "task",
+      "name": "Préparer la page de vente en ligne",
+      "poolId": "pool_agence_communication",
+      "laneId": "lane_developpement"
+    },
+    {
+      "id": "gateway_convergence",
+      "type": "parallelGateway",
+      "name": "Convergence des tâches parallèles",
+      "gatewayDirection": "converging",
+      "poolId": "pool_agence_communication",
+      "documentation": "GAP: parallélisme explicite conservé; la normalisation ne doit pas inventer de décision exclusive sans preuve métier."
+    },
+    {
+      "id": "end_lancement_pret",
+      "type": "endEvent",
+      "name": "Lancement prêt",
+      "eventDefinition": "none",
+      "poolId": "pool_agence_communication"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_gateway",
+      "source": "start_preparation",
+      "target": "gateway_parallel",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_rediger",
+      "source": "gateway_parallel",
+      "target": "task_rediger_communique",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_concevoir",
+      "source": "gateway_parallel",
+      "target": "task_concevoir_visuels",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_contacter",
+      "source": "gateway_parallel",
+      "target": "task_contacter_influenceurs",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_preparer",
+      "source": "gateway_parallel",
+      "target": "task_preparer_page_vente",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_rediger_convergence",
+      "source": "task_rediger_communique",
+      "target": "gateway_convergence",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_concevoir_convergence",
+      "source": "task_concevoir_visuels",
+      "target": "gateway_convergence",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_contacter_convergence",
+      "source": "task_contacter_influenceurs",
+      "target": "gateway_convergence",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_preparer_convergence",
+      "source": "task_preparer_page_vente",
+      "target": "gateway_convergence",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_convergence_end",
+      "source": "gateway_convergence",
+      "target": "end_lancement_pret",
+      "type": "sequenceFlow"
+    }
+  ]
+}

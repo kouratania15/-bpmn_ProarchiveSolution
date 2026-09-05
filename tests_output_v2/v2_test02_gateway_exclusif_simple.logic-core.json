@@ -1,0 +1,138 @@
+{
+  "process": {
+    "id": "process_recrutement_postulation",
+    "name": "Processus de recrutement postulation",
+    "documentation": "Processus de recrutement depuis la postulation à une offre d'emploi jusqu'à la décision finale (entretien ou réponse négative).",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_candidat",
+      "name": "Candidat",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_recruteur",
+      "name": "Recruteur",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_postulation",
+      "type": "startEvent",
+      "name": "Postulation à une offre d'emploi",
+      "eventDefinition": "none",
+      "poolId": "pool_candidat",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_postuler",
+      "type": "task",
+      "name": "Postuler à une offre d'emploi",
+      "poolId": "pool_candidat",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_examiner_cv",
+      "type": "task",
+      "name": "Examiner le CV",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_recruteur' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_decision_profil",
+      "type": "exclusiveGateway",
+      "name": "Profil correspondant ?",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "task_planifier_entretien",
+      "type": "task",
+      "name": "Planifier un entretien",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_envoyer_reponse_negative",
+      "type": "task",
+      "name": "Envoyer une réponse négative",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_entretien_planifie",
+      "type": "endEvent",
+      "name": "Entretien planifié",
+      "eventDefinition": "none",
+      "poolId": "pool_recruteur"
+    },
+    {
+      "id": "end_reponse_negative",
+      "type": "endEvent",
+      "name": "Réponse négative envoyée",
+      "eventDefinition": "none",
+      "poolId": "pool_recruteur"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_postuler",
+      "source": "start_postulation",
+      "target": "task_postuler",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_postuler_examiner",
+      "source": "task_postuler",
+      "target": "task_examiner_cv",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_examiner_decision",
+      "source": "task_examiner_cv",
+      "target": "gateway_decision_profil",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_decision_entretien",
+      "source": "gateway_decision_profil",
+      "target": "task_planifier_entretien",
+      "type": "sequenceFlow",
+      "name": "Profil correspondant",
+      "isDefault": false,
+      "condition": "le profil correspond au poste",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_entretien_planifie_end",
+      "source": "task_planifier_entretien",
+      "target": "end_entretien_planifie",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_decision_reponse_negative",
+      "source": "gateway_decision_profil",
+      "target": "task_envoyer_reponse_negative",
+      "type": "sequenceFlow",
+      "name": "Profil non correspondant",
+      "isDefault": false,
+      "condition": "le profil ne correspond pas au poste",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_reponse_negative_end",
+      "source": "task_envoyer_reponse_negative",
+      "target": "end_reponse_negative",
+      "type": "sequenceFlow"
+    }
+  ]
+}

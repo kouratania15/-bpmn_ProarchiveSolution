@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reservation_assurance"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_start_reserver_voiture" name="flow_start_reserver_voiture" />
+  <bpmn:message id="Message_flow_reserver_voiture_souscrire_assurance" name="flow_reserver_voiture_souscrire_assurance" />
+  <bpmn:message id="Message_flow_transmettre_succes" name="Succès" />
+  <bpmn:message id="Message_flow_transmettre_echec" name="Échec" />
+  <bpmn:message id="Message_flow_compensation_annulation" name="flow_compensation_annulation" />
+  <bpmn:message id="Message_flow_4" name="flow_4" />
+  <bpmn:collaboration id="Collaboration_process_reservation_assurance">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_system_reservation" name="Système de Réservation" processRef="pool_system_reservation_process" />
+    <bpmn:participant id="pool_system_assurance" name="Système d&#x27;Assurance" processRef="pool_system_assurance_process" />
+    <bpmn:participant id="pool_compensation_service" name="Service de Compensation" processRef="pool_compensation_service_process" />
+    <bpmn:messageFlow id="flow_start_reserver_voiture" name="" sourceRef="start_reservation" targetRef="task_reserver_voiture" messageRef="Message_flow_start_reserver_voiture" />
+    <bpmn:messageFlow id="flow_reserver_voiture_souscrire_assurance" name="" sourceRef="task_reserver_voiture" targetRef="task_souscrire_assurance" messageRef="Message_flow_reserver_voiture_souscrire_assurance" />
+    <bpmn:messageFlow id="flow_transmettre_succes" name="Succès" sourceRef="task_transmettre_decision" targetRef="task_confirmer_reservation" messageRef="Message_flow_transmettre_succes" />
+    <bpmn:messageFlow id="flow_transmettre_echec" name="Échec" sourceRef="task_transmettre_decision" targetRef="task_annuler_reservation" messageRef="Message_flow_transmettre_echec" />
+    <bpmn:messageFlow id="flow_compensation_annulation" name="" sourceRef="boundary_event_compensation" targetRef="task_annuler_reservation" messageRef="Message_flow_compensation_annulation" />
+    <bpmn:messageFlow id="flow_4" name="" sourceRef="start_reservation" targetRef="task_reserver_voiture" messageRef="Message_flow_4" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_reservation" name="Début de la réservation">
+    </bpmn:startEvent>
+  </bpmn:process>
+  <bpmn:process id="pool_system_reservation_process" name="Système de Réservation" isExecutable="true">
+    <bpmn:task id="task_reserver_voiture" name="Réserver une voiture">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_system_reservation&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+    </bpmn:task>
+    <bpmn:task id="task_confirmer_reservation" name="Confirmer la réservation complète">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_system_reservation&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_confirmer_reservation_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reservation_confirmation" name="Réservation confirmée">
+      <bpmn:incoming>flow_confirmer_reservation_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_confirmer_reservation_end" name="" sourceRef="task_confirmer_reservation" targetRef="end_reservation_confirmation">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_system_assurance_process" name="Système d&#x27;Assurance" isExecutable="true">
+    <bpmn:task id="task_souscrire_assurance" name="Souscrire une assurance voyage">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_system_assurance&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_souscrire_assurance_verifier</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_verifier_souscription" name="Vérifier la souscription de l&#x27;assurance">
+      <bpmn:incoming>flow_souscrire_assurance_verifier</bpmn:incoming>
+      <bpmn:outgoing>flow_verifier_souscription_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_transmettre_decision" name="Transmettre la décision de souscription">
+      <bpmn:incoming>flow_gateway_transmettre</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_decision_assurance" name="Souscription d&#x27;assurance réussie ?">
+      <bpmn:incoming>flow_verifier_souscription_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_transmettre</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:boundaryEvent id="boundary_event_compensation" name="Annulation automatique" attachedToRef="task_verifier_souscription" cancelActivity="true">
+      <bpmn:compensateEventDefinition id="boundary_event_compensation_def">
+      </bpmn:compensateEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="flow_souscrire_assurance_verifier" name="" sourceRef="task_souscrire_assurance" targetRef="task_verifier_souscription">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_verifier_souscription_gateway" name="" sourceRef="task_verifier_souscription" targetRef="gateway_decision_assurance">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_transmettre" name="Transmettre décision" sourceRef="gateway_decision_assurance" targetRef="task_transmettre_decision">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_compensation_service_process" name="Service de Compensation" isExecutable="true">
+    <bpmn:task id="task_annuler_reservation" name="Annuler la réservation de la voiture" isForCompensation="true">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_compensation_service&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_annuler_reservation_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reservation_annulee" name="Réservation annulée">
+      <bpmn:incoming>flow_annuler_reservation_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_annuler_reservation_end" name="" sourceRef="task_annuler_reservation" targetRef="end_reservation_annulee">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reservation_assurance">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="256" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_system_reservation_di" bpmnElement="pool_system_reservation" isHorizontal="true">
+        <dc:Bounds x="60" y="250" width="1376" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_system_assurance_di" bpmnElement="pool_system_assurance" isHorizontal="true">
+        <dc:Bounds x="60" y="480" width="1120" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_compensation_service_di" bpmnElement="pool_compensation_service" isHorizontal="true">
+        <dc:Bounds x="60" y="710" width="1376" height="256" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reservation_di" bpmnElement="start_reservation">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_reserver_voiture_di" bpmnElement="task_reserver_voiture">
+        <dc:Bounds x="280" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_souscrire_assurance_di" bpmnElement="task_souscrire_assurance">
+        <dc:Bounds x="440" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verifier_souscription_di" bpmnElement="task_verifier_souscription">
+        <dc:Bounds x="600" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_annuler_reservation_di" bpmnElement="task_annuler_reservation">
+        <dc:Bounds x="1080" y="816" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_confirmer_reservation_di" bpmnElement="task_confirmer_reservation">
+        <dc:Bounds x="1080" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_transmettre_decision_di" bpmnElement="task_transmettre_decision">
+        <dc:Bounds x="920" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_decision_assurance_di" bpmnElement="gateway_decision_assurance">
+        <dc:Bounds x="760" y="520" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reservation_confirmation_di" bpmnElement="end_reservation_confirmation">
+        <dc:Bounds x="1240" y="290" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reservation_annulee_di" bpmnElement="end_reservation_annulee">
+        <dc:Bounds x="1240" y="750" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="boundary_event_compensation_di" bpmnElement="boundary_event_compensation">
+        <dc:Bounds x="682" y="582" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_souscrire_assurance_verifier_di" bpmnElement="flow_souscrire_assurance_verifier">
+        <di:waypoint x="540" y="560" />
+        <di:waypoint x="600" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verifier_souscription_gateway_di" bpmnElement="flow_verifier_souscription_gateway">
+        <di:waypoint x="700" y="560" />
+        <di:waypoint x="730" y="560" />
+        <di:waypoint x="730" y="545" />
+        <di:waypoint x="760" y="545" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_transmettre_di" bpmnElement="flow_gateway_transmettre">
+        <di:waypoint x="810" y="545" />
+        <di:waypoint x="865" y="545" />
+        <di:waypoint x="865" y="560" />
+        <di:waypoint x="920" y="560" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="845" y="540" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_confirmer_reservation_end_di" bpmnElement="flow_confirmer_reservation_end">
+        <di:waypoint x="1180" y="330" />
+        <di:waypoint x="1210" y="330" />
+        <di:waypoint x="1210" y="308" />
+        <di:waypoint x="1240" y="308" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_annuler_reservation_end_di" bpmnElement="flow_annuler_reservation_end">
+        <di:waypoint x="1180" y="856" />
+        <di:waypoint x="1210" y="856" />
+        <di:waypoint x="1210" y="768" />
+        <di:waypoint x="1240" y="768" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_start_reserver_voiture_di" bpmnElement="flow_start_reserver_voiture">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="330" />
+        <di:waypoint x="280" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_reserver_voiture_souscrire_assurance_di" bpmnElement="flow_reserver_voiture_souscrire_assurance">
+        <di:waypoint x="380" y="330" />
+        <di:waypoint x="410" y="330" />
+        <di:waypoint x="410" y="560" />
+        <di:waypoint x="440" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_transmettre_succes_di" bpmnElement="flow_transmettre_succes">
+        <di:waypoint x="1020" y="560" />
+        <di:waypoint x="1050" y="560" />
+        <di:waypoint x="1050" y="330" />
+        <di:waypoint x="1080" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1030" y="310" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_transmettre_echec_di" bpmnElement="flow_transmettre_echec">
+        <di:waypoint x="1020" y="560" />
+        <di:waypoint x="1050" y="560" />
+        <di:waypoint x="1050" y="856" />
+        <di:waypoint x="1080" y="856" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1030" y="836" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_compensation_annulation_di" bpmnElement="flow_compensation_annulation">
+        <di:waypoint x="700" y="618" />
+        <di:waypoint x="890" y="618" />
+        <di:waypoint x="890" y="856" />
+        <di:waypoint x="1080" y="856" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_4_di" bpmnElement="flow_4">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="330" />
+        <di:waypoint x="280" y="330" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

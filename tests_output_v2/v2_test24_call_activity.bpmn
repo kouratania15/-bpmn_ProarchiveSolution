@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_leave_request"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_receive_call_validation" name="flow_receive_call_validation" />
+  <bpmn:message id="Message_flow_call_validation_subprocess" name="flow_call_validation_subprocess" />
+  <bpmn:collaboration id="Collaboration_process_leave_request">
+    <bpmn:participant id="pool_rh" name="Service des Ressources Humaines (RH)" processRef="pool_rh_process" />
+    <bpmn:participant id="pool_system" name="Système informatique" processRef="pool_system_process" />
+    <bpmn:messageFlow id="flow_receive_call_validation" name="" sourceRef="task_receive_leave_request" targetRef="task_call_hierarchy_validation" messageRef="Message_flow_receive_call_validation" />
+    <bpmn:messageFlow id="flow_call_validation_subprocess" name="" sourceRef="task_call_hierarchy_validation" targetRef="task_hierarchy_validation" messageRef="Message_flow_call_validation_subprocess" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_rh_process" name="Service des Ressources Humaines (RH)" isExecutable="true">
+    <bpmn:startEvent id="start_event_receive_leave_request" name="Demande de congé reçue">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_rh&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_receive_request</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_receive_leave_request" name="Recevoir une demande de congé">
+      <bpmn:incoming>flow_start_receive_request</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:subProcess id="task_hierarchy_validation" name="Validation hiérarchique">
+      <bpmn:outgoing>flow_subprocess_end</bpmn:outgoing>
+      <bpmn:startEvent id="start_event_hierarchy_validation" name="Début de la validation hiérarchique">
+        <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_rh&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="end_event_hierarchy_validation" name="Validation hiérarchique obtenue">
+        <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_rh&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:task id="task_confirm_leave_to_employee" name="Confirmer le congé à l&#x27;employé">
+      <bpmn:incoming>flow_subprocess_end</bpmn:incoming>
+      <bpmn:outgoing>flow_confirm_leave_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_leave_confirmed" name="Congé confirmé à l&#x27;employé">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_rh&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_confirm_leave_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_receive_request" name="" sourceRef="start_event_receive_leave_request" targetRef="task_receive_leave_request">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_subprocess_end" name="" sourceRef="task_hierarchy_validation" targetRef="task_confirm_leave_to_employee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_confirm_leave_end" name="" sourceRef="task_confirm_leave_to_employee" targetRef="end_event_leave_confirmed">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_system_process" name="Système informatique" isExecutable="true">
+    <bpmn:serviceTask id="task_call_hierarchy_validation" name="Appeler le processus standard de validation hiérarchique">
+    </bpmn:serviceTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_leave_request">
+      <bpmndi:BPMNShape id="pool_rh_di" bpmnElement="pool_rh" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1096" height="312" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_system_di" bpmnElement="pool_system" isHorizontal="true">
+        <dc:Bounds x="60" y="402" width="640" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_receive_leave_request_di" bpmnElement="start_event_receive_leave_request">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_receive_leave_request_di" bpmnElement="task_receive_leave_request">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_call_hierarchy_validation_di" bpmnElement="task_call_hierarchy_validation">
+        <dc:Bounds x="440" y="442" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_hierarchy_validation_di" bpmnElement="task_hierarchy_validation" isExpanded="true">
+        <dc:Bounds x="600" y="90" width="200" height="202" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_hierarchy_validation_di" bpmnElement="start_event_hierarchy_validation">
+        <dc:Bounds x="640" y="140" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_hierarchy_validation_di" bpmnElement="end_event_hierarchy_validation">
+        <dc:Bounds x="640" y="226" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_confirm_leave_to_employee_di" bpmnElement="task_confirm_leave_to_employee">
+        <dc:Bounds x="800" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_leave_confirmed_di" bpmnElement="end_event_leave_confirmed">
+        <dc:Bounds x="960" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_receive_request_di" bpmnElement="flow_start_receive_request">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_subprocess_end_di" bpmnElement="flow_subprocess_end">
+        <di:waypoint x="800" y="191" />
+        <di:waypoint x="830" y="191" />
+        <di:waypoint x="830" y="251" />
+        <di:waypoint x="770" y="251" />
+        <di:waypoint x="770" y="130" />
+        <di:waypoint x="800" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_confirm_leave_end_di" bpmnElement="flow_confirm_leave_end">
+        <di:waypoint x="900" y="130" />
+        <di:waypoint x="930" y="130" />
+        <di:waypoint x="930" y="108" />
+        <di:waypoint x="960" y="108" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_receive_call_validation_di" bpmnElement="flow_receive_call_validation">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="482" />
+        <di:waypoint x="440" y="482" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_call_validation_subprocess_di" bpmnElement="flow_call_validation_subprocess">
+        <di:waypoint x="540" y="482" />
+        <di:waypoint x="570" y="482" />
+        <di:waypoint x="570" y="191" />
+        <di:waypoint x="600" y="191" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

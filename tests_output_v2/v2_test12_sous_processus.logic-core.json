@@ -1,0 +1,183 @@
+{
+  "process": {
+    "id": "process_remboursement",
+    "name": "Processus de demande et traitement de remboursement",
+    "documentation": "Processus de gestion des demandes de remboursement par un assureur, incluant le traitement du dossier et l'envoi du remboursement au client."
+  },
+  "pools": [
+    {
+      "id": "pool_assureur",
+      "name": "Assureur",
+      "lanes": [
+        {
+          "id": "lane_contrat",
+          "name": "Vérification du contrat"
+        },
+        {
+          "id": "lane_dommages",
+          "name": "Évaluation des dommages"
+        },
+        {
+          "id": "lane_validation",
+          "name": "Validation par superviseur"
+        },
+        {
+          "id": "lane_remboursement",
+          "name": "Envoi du remboursement"
+        }
+      ]
+    },
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_demande",
+      "type": "startEvent",
+      "name": "Demande de remboursement déposée",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_client' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_client_depose_demande",
+      "type": "task",
+      "name": "Client dépose une demande de remboursement",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_assureur_traitement_dossier",
+      "type": "subProcess",
+      "name": "Traitement du dossier",
+      "poolId": "pool_assureur",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "start_event_traitement",
+      "type": "startEvent",
+      "name": "Début du traitement du dossier",
+      "eventDefinition": "none",
+      "parentSubProcessId": "task_assureur_traitement_dossier",
+      "sourceProcessElement": "activity_2",
+      "poolId": "pool_assureur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_assureur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_verifier_contrat",
+      "type": "task",
+      "name": "Vérifier le contrat",
+      "laneId": "lane_contrat",
+      "parentSubProcessId": "task_assureur_traitement_dossier",
+      "sourceProcessElement": "activity_3",
+      "poolId": "pool_assureur"
+    },
+    {
+      "id": "task_evaluer_dommages",
+      "type": "task",
+      "name": "Évaluer le montant des dommages",
+      "laneId": "lane_dommages",
+      "parentSubProcessId": "task_assureur_traitement_dossier",
+      "sourceProcessElement": "activity_4",
+      "poolId": "pool_assureur"
+    },
+    {
+      "id": "task_valider_superviseur",
+      "type": "task",
+      "name": "Validation par un superviseur",
+      "laneId": "lane_validation",
+      "parentSubProcessId": "task_assureur_traitement_dossier",
+      "sourceProcessElement": "activity_5",
+      "poolId": "pool_assureur"
+    },
+    {
+      "id": "end_event_traitement",
+      "type": "endEvent",
+      "name": "Traitement du dossier terminé",
+      "eventDefinition": "none",
+      "parentSubProcessId": "task_assureur_traitement_dossier",
+      "sourceProcessElement": "event_2",
+      "poolId": "pool_assureur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_assureur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_envoyer_remboursement",
+      "type": "task",
+      "name": "Envoyer le remboursement au client",
+      "laneId": "lane_remboursement",
+      "poolId": "pool_assureur",
+      "sourceProcessElement": "activity_6"
+    },
+    {
+      "id": "end_event_remboursement",
+      "type": "endEvent",
+      "name": "Remboursement envoyé au client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_3",
+      "poolId": "pool_assureur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_assureur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_demande",
+      "source": "start_event_demande",
+      "target": "task_client_depose_demande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_demande_traitement",
+      "source": "task_client_depose_demande",
+      "target": "task_assureur_traitement_dossier",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_start_verification",
+      "source": "start_event_traitement",
+      "target": "task_verifier_contrat",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "flow_verification_dommages",
+      "source": "task_verifier_contrat",
+      "target": "task_evaluer_dommages",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "flow_dommages_validation",
+      "source": "task_evaluer_dommages",
+      "target": "task_valider_superviseur",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "flow_validation_traitement",
+      "source": "task_valider_superviseur",
+      "target": "end_event_traitement",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "flow_traitement_remboursement",
+      "source": "task_assureur_traitement_dossier",
+      "target": "task_envoyer_remboursement",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_009"
+    },
+    {
+      "id": "flow_remboursement_fin",
+      "source": "task_envoyer_remboursement",
+      "target": "end_event_remboursement",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_010"
+    }
+  ]
+}

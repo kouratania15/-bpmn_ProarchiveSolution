@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,11 @@ try:
 	import jsonschema
 except ImportError:
 	jsonschema = None
+
+try:
+	import httpx
+except ImportError:
+	httpx = None
 
 load_dotenv()
 
@@ -48,19 +54,76 @@ def _response_format(schema_filename: str, name: str) -> dict[str, Any]:
 	return {"type": "json_schema", "json_schema": {"name": name, "schema": schema}}
 
 
-def _complete(client: Any, model: str, messages: list[dict[str, str]], schema: str, name: str) -> str:
-	response = client.chat.complete(
-		model=model,
-		messages=messages,
-		response_format=_response_format(schema, name),
-		temperature=TEMPERATURE,
-	)
-	content = response.choices[0].message.content
-	if isinstance(content, list):
-		content = "".join(str(item) for item in content)
-	if not content:
-		raise ValueError("Réponse vide reçue de Mistral AI.")
-	return str(content).strip().removeprefix("```json").removesuffix("```").strip()
+def _complete(client: Any, model: str, messages: list[dict[str, str]], schema: str, name: str,
+			  max_retries: int = 3) -> str:
+	last_exc: Exception | None = None
+	for attempt in range(max_retries + 1):
+		try:
+			response = client.chat.complete(
+				model=model,
+				messages=messages,
+				response_format=_response_format(schema, name),
+				temperature=TEMPERATURE,
+			)
+			content = response.choices[0].message.content
+			if isinstance(content, list):
+				content = "".join(str(item) for item in content)
+			if not content:
+				raise ValueError("Réponse vide reçue de Mistral AI.")
+			return str(content).strip().removeprefix("```json").removesuffix("```").strip()
+		except ValueError:
+			raise
+		except Exception as exc:
+			status_code = getattr(exc, "status_code", None) or getattr(exc, "raw_status_code", None)
+			is_rate_limited = status_code == 429 or "429" in str(exc) or "rate_limited" in str(exc).lower()
+			# Les pannes réseau transitoires (DNS, coupure Wi-Fi, timeout de connexion)
+			# remontent comme httpx.TransportError et non comme un statut HTTP : ce
+			# n'est ni un rate-limit ni une erreur de compte, mais ça reste presque
+			# toujours résolu par une simple nouvelle tentative quelques secondes après.
+			is_transient_network_error = httpx is not None and isinstance(exc, httpx.TransportError)
+			if (is_rate_limited or is_transient_network_error) and attempt < max_retries:
+				last_exc = exc
+				time.sleep(2 ** attempt)  # backoff : 1s, 2s, 4s
+				continue
+			raise
+	raise last_exc  # pragma: no cover - inatteignable en pratique
+
+
+_SCHEMA_METADATA_KEYS = {"$schema", "$id", "$defs", "definitions", "title"}
+
+
+def _strip_schema_metadata(obj: Any) -> Any:
+	"""Retire les clés de méta-schéma (ex: $id, $schema) que certains modèles recopient par erreur."""
+	if isinstance(obj, dict):
+		return {k: v for k, v in obj.items() if k not in _SCHEMA_METADATA_KEYS}
+	return obj
+
+
+def _prune_extra_properties(obj: Any, schema: dict[str, Any]) -> Any:
+	"""Retire récursivement les propriétés non déclarées dans le schema quand
+	additionalProperties=false. Les schémas de ce projet (structured-analysis,
+	process-description, logic-core) partagent des noms de champs très proches
+	(ex: 'source_text' existe dans l'un mais pas l'autre) ; un modèle qui corrige
+	un JSON existant recopie parfois un champ du "mauvais" schema. Élaguer ces
+	champs superflus est plus robuste que de faire échouer toute la génération
+	pour un détail sans rapport avec le fond de la correction demandée."""
+	if not isinstance(schema, dict):
+		return obj
+	if isinstance(obj, dict) and schema.get("type") == "object":
+		properties = schema.get("properties", {})
+		if schema.get("additionalProperties") is False:
+			obj = {k: v for k, v in obj.items() if k in properties}
+		for key in list(obj.keys()):
+			sub_schema = properties.get(key)
+			if isinstance(sub_schema, dict):
+				obj[key] = _prune_extra_properties(obj[key], sub_schema)
+		return obj
+	if isinstance(obj, list) and schema.get("type") == "array":
+		item_schema = schema.get("items")
+		if isinstance(item_schema, dict):
+			return [_prune_extra_properties(item, item_schema) for item in obj]
+		return obj
+	return obj
 
 
 def _log_llm(run_id: str | None, action: ActionType, step: str, status: str,
@@ -82,6 +145,14 @@ def _is_mistral_model_issue(exc: Exception) -> bool:
 	if status_code is not None and isinstance(status_code, int):
 		if status_code in (401, 402, 403, 429) or (500 <= status_code <= 599):
 			return True
+
+	# Panne réseau transitoire (DNS/coupure/timeout) : remonte comme httpx.TransportError
+	# (ex: ConnectError "[Errno 11001] getaddrinfo failed"), sans status_code ni mot-clé
+	# reconnu par les motifs textuels ci-dessous — sans ce cas explicite, une simple
+	# coupure Wi-Fi fait planter tout le pipeline avec une erreur opaque au lieu de
+	# basculer sur le repli local comme les autres pannes Mistral.
+	if httpx is not None and isinstance(exc, httpx.TransportError):
+		return True
 
 	message = str(exc).lower()
 	patterns = (
@@ -193,10 +264,11 @@ def _fallback_structured_analysis(user_text: str) -> dict[str, Any]:
 				negative_outcome = act_id
 			conditions.append({
 				"id": condition_id,
-				"condition_text": positive[:60],
+				"condition": positive[:60],
+				"evidence": segment,
 				"branches": [
-					{"condition": positive[:60], "outcome": positive_outcome},
-					{"condition": negative[:60], "outcome": negative_outcome},
+					{"label": positive[:60], "meaning": positive_outcome},
+					{"label": negative[:60], "meaning": negative_outcome},
 				],
 			})
 
@@ -278,7 +350,7 @@ def extract_structured_analysis(user_text: str, run_id: str | None = None,
 	try:
 		raw = _complete(_get_mistral_client(api_key), model, messages,
 						"structured-analysis.schema.json", "structured_analysis")
-		result = json.loads(raw)
+		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("structured-analysis.schema.json"))
 		if jsonschema is not None:
 			try:
 				jsonschema.Draft202012Validator(_load_json_schema("structured-analysis.schema.json")).validate(result)
@@ -326,8 +398,14 @@ def build_process_description(analysis: dict[str, Any], run_id: str | None = Non
 		"branches": [{"condition": branch.get("label"), "outcome": branch.get("meaning")}
 			for branch in item.get("branches", [])], "sourceAnalysisId": item.get("id"),
 		"evidence": item.get("evidence", "")} for item in analysis.get("conditions", [])]
+	relations = []
+	for index, item in enumerate(analysis.get("relations", []), 1):
+		raw_relation = item.get("relation")
+		relation_type = "message" if raw_relation == "message" else "sequence"
+		relations.append({"id": item.get("id") or f"relation_{index:03d}",
+			"source": item.get("source"), "target": item.get("target"), "type": relation_type})
 	identified = {"participants": participants, "activities": activities, "events": events,
-		"conditions": conditions, "gateways": [], "relations": analysis.get("relations", []),
+		"conditions": conditions, "gateways": [], "relations": relations,
 		"sequence_flows": []}
 	result = {"process_name": "Processus analysé", "understanding_summary": "Analyse structurée des faits source.",
 		"identified_elements": identified, "gaps": [{"gap_id": gap["id"], "description": gap["description"],
@@ -530,30 +608,8 @@ def _repair_process_description(faulty_pd: dict[str, Any]) -> dict[str, Any]:
 		source_id = current.get("id")
 		target_id = next_item.get("id")
 		if isinstance(source_id, str) and isinstance(target_id, str) and (source_id, target_id) not in seen_pairs:
-			relations.append({"id": f"relation_{len(relations) + 1}", "source": source_id, "target": target_id, "relation": "after"})
+			relations.append({"id": f"relation_{len(relations) + 1}", "source": source_id, "target": target_id, "type": "sequence"})
 			seen_pairs.add((source_id, target_id))
-
-	if ordered:
-		start = ordered[0]["item"]
-		end = ordered[-1]["item"]
-		for category in ("events", "activities"):
-			for item in identified.get(category, []) or []:
-				if not isinstance(item, dict):
-					continue
-				item_id = item.get("id")
-				if not isinstance(item_id, str):
-					continue
-				if item_id == start.get("id"):
-					continue
-				if item_id == end.get("id"):
-					continue
-			if all((source, item_id) not in seen_pairs for source in [e.get("id") for e in ordered if isinstance(e, dict) and isinstance(e.get("id"), str)]):
-				for obj in ordered:
-					obj_id = obj.get("item", {}).get("id")
-					if isinstance(obj_id, str) and obj_id != item_id and (obj_id, item_id) not in seen_pairs:
-						relations.append({"id": f"relation_{len(relations) + 1}", "source": obj_id, "target": item_id, "relation": "after"})
-						seen_pairs.add((obj_id, item_id))
-						break
 
 	identified["relations"] = relations
 	identified["sequence_flows"] = [
@@ -577,7 +633,7 @@ def heal_process_description(faulty_pd: dict[str, Any], validation_errors: list[
 		messages = [{"role": "user", "content": prompt}]
 		raw = _complete(_get_mistral_client(api_key), model, messages,
 						"process-description.schema.json", "process_description_fix")
-		result = json.loads(raw)
+		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("process-description.schema.json"))
 		_log_llm(run_id, ActionType.FIX, "process_description_healing", "success", prompt, raw, attempt=attempt, model=model)
 		return result
 	except Exception as exc:
@@ -603,7 +659,7 @@ def generate_logic_core_from_pd(process_desc: dict[str, Any], run_id: str | None
 	messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
 	try:
 		raw = _complete(_get_mistral_client(api_key), model, messages, "logic-core.schema.json", "logic_core")
-		result = json.loads(raw)
+		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("logic-core.schema.json"))
 		# Sécuriser les relations de séquence même si le LLM a produit un graphe incomplet.
 		if isinstance(result, dict):
 			from validate import normalize_logic_core_graph
@@ -634,7 +690,7 @@ def extract_logic_core(user_text: str, existing_logic_core: dict[str, Any] | Non
 		)
 		messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
 		raw = _complete(_get_mistral_client(api_key), model, messages, "logic-core.schema.json", "logic_core_amendment")
-		result = json.loads(raw)
+		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("logic-core.schema.json"))
 		_log_llm(run_id, ActionType.GENERATION, "logic_core_amendment", "success", _trace_prompt(messages), raw, model=model)
 		return result
 	return generate_logic_core_from_pd(extract_process_description(user_text, run_id, api_key, model), run_id, api_key, model)
@@ -651,13 +707,96 @@ def self_heal_logic_core(faulty_logic_core: dict[str, Any], validation_errors: l
 		f"Contexte:\n{user_context or ''}\nLogic-Core:\n{json.dumps(faulty_logic_core, ensure_ascii=False)}"
 	)
 	if any("Fusion suspecte d'issues métier opposées" in err for err in validation_errors):
-		prompt += "\nRappel de correction : applique la Règle 15.6 : si deux branches opposées d'une décision aboutissent à des issues métier différentes et que le texte ne décrit pas d'étape commune explicite, sépare-les en deux endEvent distincts, conserve tous les IDs existants et ajoute uniquement les nouveaux endEvent nécessaires."
+		prompt += (
+			"\nRappel de correction : avant toute chose, vérifie si l'une des deux branches correspond en "
+			"réalité à une BOUCLE explicitement décrite dans le texte (ex: \"the employee corrects it and "
+			"the system validates it again\" = la branche 'incorrect/non' doit reboucler par sequenceFlow "
+			"vers la tâche de (re)validation déjà existante, PAS se terminer par un endEvent). Si c'est le "
+			"cas, applique la Règle 15.5 : ajoute uniquement ce sequenceFlow de retour, ne crée AUCUN "
+			"nouvel endEvent, et conserve tous les IDs existants.\n"
+			"Si en revanche les deux branches représentent deux issues métier réellement terminales et "
+			"distinctes (aucune re-tentative décrite dans le texte), applique la Règle 15.6 : sépare-les en "
+			"deux endEvent distincts, conserve tous les IDs existants et ajoute uniquement les nouveaux "
+			"endEvent strictement nécessaires — ne recrée jamais un endEvent qui existe déjà sous un autre nom."
+		)
+	if any("n'est jamais refermé par un gateway convergent du même type" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (Règle 10.2/10.3) : le split inclusiveGateway/parallelGateway visé doit être "
+			"refermé par un second gateway du MÊME type (gatewayDirection='converging') AVANT la tâche commune où "
+			"ses branches se rejoignent actuellement. Ajoute ce gateway convergent et fais pointer chaque branche "
+			"vers lui plutôt que directement vers la tâche commune ; ne crée pas de nouveau endEvent pour ça."
+		)
+	if any("est de type message (eventDefinition='message') mais n'est relié à aucun messageFlow" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (section 3) : cet événement message n'a aucune communication externe réelle "
+			"(aucun messageFlow vers/depuis un autre pool). Remplace-le par un sequenceFlow direct entre la tâche "
+			"précédente et la tâche/gateway suivante, et supprime ce nœud événement — ne le garde que s'il existe "
+			"vraiment un échange entre deux pools distincts décrit dans le texte."
+		)
+	if any("mais n'est qu'un simple maillon de passage dans la chaîne" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (section 3) : cet événement error/signal n'est qu'une condition évaluée "
+			"par un gateway déguisée en événement — le texte décrit une simple branche conditionnelle ('si "
+			"une erreur survient...'), pas un événement distinct à attendre/capturer. Supprime ce nœud "
+			"événement et relie directement le gateway (ou la tâche précédente) à la tâche suivante par "
+			"sequenceFlow, en conservant le label de la branche s'il y en a un."
+		)
+	if any("n'est pas un point de communication valide" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : un messageFlow ne doit jamais partir/arriver sur un gateway. Convertis ce "
+			"messageFlow en sequenceFlow interne (la décision reste modélisée par le gateway), et si une "
+			"communication externe est réellement décrite dans le texte, fais porter le messageFlow uniquement "
+			"sur la tâche d'envoi/réception concernée, pas sur le gateway."
+		)
+	if any("n'a pas de nom explicite" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : donne à chaque endEvent sans nom un nom explicite décrivant l'issue "
+			"métier qu'il représente (ex: 'Prêt approuvé', 'Commande annulée'), sans changer son id."
+		)
+	if any("sequenceFlow sortants alors qu'il n'est pas un gateway" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : ce nœud a probablement fusionné à tort DEUX occurrences textuelles "
+			"distinctes d'une action similaire (ex: deux 'informer le client' dans des branches/motifs "
+			"différents — cf. section 2 de SKILL.md). Vérifie D'ABORD le texte original : si les branches "
+			"sortantes correspondent à deux mentions narrativement différentes, la correction PRÉFÉRÉE est "
+			"de séparer ce nœud en autant de nœuds distincts que d'occurrences, chacun avec son propre "
+			"sequenceFlow unique vers sa propre tâche/fin d'origine — PAS d'insérer un gateway après un nœud "
+			"fusionné à tort. N'insère un exclusiveGateway/inclusiveGateway (cf. Règle 10.3) que si les "
+			"branches représentent réellement UNE SEULE décision du texte avec plusieurs issues, pas deux "
+			"actions distinctes réunies par erreur."
+		)
+	if any("relie directement le subProcess" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (section 9.1) : supprime le sequenceFlow reliant le subProcess à son "
+			"propre enfant. Le sequenceFlow entrant du subProcess doit déjà cibler le subProcess lui-même "
+			"(pas un de ses enfants) ; le point d'entrée interne est déduit automatiquement de l'enfant sans "
+			"prédécesseur parmi les autres enfants — aucune arête supplémentaire n'est nécessaire pour ça."
+		)
+	if any("est atteint depuis" in err and "gateways" in err and "différents et non liés" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (section 2) : ce nœud fusionne à tort deux mentions textuelles distinctes "
+			"(deux gateways différents et non liés y mènent, pas deux branches sœurs d'un même gateway). "
+			"Retourne au texte original et identifie les DEUX passages narratifs distincts qui ont été "
+			"fusionnés. Crée un nœud SÉPARÉ pour chacun (avec un id et, si besoin, un nom légèrement différent "
+			"pour refléter son contexte propre), et fais pointer chaque chemin entrant vers SON PROPRE nœud "
+			"plutôt que vers le nœud partagé actuel. Conserve tous les autres IDs existants."
+		)
+	if any("implique le gateway" in err and "point de communication" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (POOL-001) : un gateway ne peut jamais être relié par messageFlow ni "
+			"avoir un sequenceFlow direct vers un pool différent. Deux options : (a) si la tâche de l'autre "
+			"côté est en réalité exécutée par le même acteur que le gateway, corrige son poolId pour qu'elle "
+			"rejoigne le pool du gateway (sequenceFlow direct, pas de messageFlow) ; (b) sinon, insère une "
+			"tâche intermédiaire dans le pool du gateway (ex: 'Transmettre la décision'), relie le gateway à "
+			"cette tâche par sequenceFlow, puis fais porter le messageFlow SUR cette tâche intermédiaire vers "
+			"la tâche de l'autre pool — jamais directement depuis/vers le gateway lui-même."
+		)
 	messages: list[dict[str, str]] = []
 	try:
 		messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
 		raw = _complete(_get_mistral_client(api_key), model, messages,
 					"logic-core.schema.json", "logic_core_fix")
-		result = json.loads(raw)
+		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("logic-core.schema.json"))
 		_log_llm(run_id, ActionType.FIX, "logic_core_healing", "success", _trace_prompt(messages), raw, attempt=attempt, model=model)
 		return result
 	except Exception as exc:

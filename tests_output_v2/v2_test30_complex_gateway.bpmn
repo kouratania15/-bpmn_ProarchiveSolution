@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_subvention"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_subvention">
+    <bpmn:participant id="pool_evaluateurs" name="Évaluateurs" processRef="process_subvention" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_subvention" name="Évaluateurs" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_evaluateur_1" name="Évaluateur 1">
+        <bpmn:flowNodeRef>task_evaluate_social_impact</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_evaluateur_2" name="Évaluateur 2">
+        <bpmn:flowNodeRef>task_evaluate_financial_viability</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_evaluateur_3" name="Évaluateur 3">
+        <bpmn:flowNodeRef>task_evaluate_innovation</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_event" name="Demande de subvention reçue">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:inclusiveGateway id="start_event_gw" name="Début des évaluations">
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_2</bpmn:outgoing>
+      <bpmn:outgoing>flow_3</bpmn:outgoing>
+      <bpmn:outgoing>flow_4</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:task id="task_evaluate_social_impact" name="Évaluer le critère d&#x27;impact social">
+      <bpmn:incoming>flow_2</bpmn:incoming>
+      <bpmn:outgoing>flow_social_to_combination_split</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluate_financial_viability" name="Évaluer le critère de viabilité financière">
+      <bpmn:incoming>flow_3</bpmn:incoming>
+      <bpmn:outgoing>flow_financial_to_combination_split</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluate_innovation" name="Évaluer le critère d&#x27;innovation">
+      <bpmn:incoming>flow_4</bpmn:incoming>
+      <bpmn:outgoing>flow_innovation_to_combination_split</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:inclusiveGateway id="gateway_combination_split" name="Combination des avis">
+      <bpmn:incoming>flow_social_to_combination_split</bpmn:incoming>
+      <bpmn:incoming>flow_financial_to_combination_split</bpmn:incoming>
+      <bpmn:incoming>flow_innovation_to_combination_split</bpmn:incoming>
+      <bpmn:outgoing>flow_combination_split_to_combination</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:inclusiveGateway id="gateway_combination" name="Vérification des avis favorables">
+      <bpmn:documentation>La subvention est accordée si au moins deux des trois critères reçoivent un avis favorable.</bpmn:documentation>
+      <bpmn:incoming>flow_combination_split_to_combination</bpmn:incoming>
+      <bpmn:outgoing>flow_combination_to_grant</bpmn:outgoing>
+      <bpmn:outgoing>flow_combination_to_end_rejected</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:task id="task_grant_subvention" name="Accorder la subvention">
+      <bpmn:incoming>flow_combination_to_grant</bpmn:incoming>
+      <bpmn:outgoing>flow_grant_to_end_granted</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_granted" name="Subvention accordée">
+      <bpmn:incoming>flow_grant_to_end_granted</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_event_rejected" name="Subvention refusée">
+      <bpmn:incoming>flow_combination_to_end_rejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_event" targetRef="start_event_gw">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_2" name="" sourceRef="start_event_gw" targetRef="task_evaluate_social_impact">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_3" name="" sourceRef="start_event_gw" targetRef="task_evaluate_financial_viability">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_4" name="" sourceRef="start_event_gw" targetRef="task_evaluate_innovation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_social_to_combination_split" name="" sourceRef="task_evaluate_social_impact" targetRef="gateway_combination_split">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_financial_to_combination_split" name="" sourceRef="task_evaluate_financial_viability" targetRef="gateway_combination_split">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_innovation_to_combination_split" name="" sourceRef="task_evaluate_innovation" targetRef="gateway_combination_split">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_combination_split_to_combination" name="" sourceRef="gateway_combination_split" targetRef="gateway_combination">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_combination_to_grant" name="Au moins deux avis favorables" sourceRef="gateway_combination" targetRef="task_grant_subvention">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_grant_to_end_granted" name="" sourceRef="task_grant_subvention" targetRef="end_event_granted">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_combination_to_end_rejected" name="Moins de deux avis favorables" sourceRef="gateway_combination" targetRef="end_event_rejected">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_subvention">
+      <bpmndi:BPMNShape id="pool_evaluateurs_di" bpmnElement="pool_evaluateurs" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="900" height="570" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_evaluateur_1_di" bpmnElement="lane_evaluateur_1" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_evaluateur_2_di" bpmnElement="lane_evaluateur_2" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_evaluateur_3_di" bpmnElement="lane_evaluateur_3" isHorizontal="true">
+        <dc:Bounds x="90" y="430" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_gw_di" bpmnElement="start_event_gw">
+        <dc:Bounds x="280" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluate_social_impact_di" bpmnElement="task_evaluate_social_impact">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluate_financial_viability_di" bpmnElement="task_evaluate_financial_viability">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluate_innovation_di" bpmnElement="task_evaluate_innovation">
+        <dc:Bounds x="440" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_combination_split_di" bpmnElement="gateway_combination_split">
+        <dc:Bounds x="600" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_combination_di" bpmnElement="gateway_combination">
+        <dc:Bounds x="760" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_grant_subvention_di" bpmnElement="task_grant_subvention">
+        <dc:Bounds x="920" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_granted_di" bpmnElement="end_event_granted">
+        <dc:Bounds x="1080" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_rejected_di" bpmnElement="end_event_rejected">
+        <dc:Bounds x="920" y="210" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="105" />
+        <di:waypoint x="280" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_3_di" bpmnElement="flow_3">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="320" />
+        <di:waypoint x="440" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_4_di" bpmnElement="flow_4">
+        <di:waypoint x="330" y="105" />
+        <di:waypoint x="385" y="105" />
+        <di:waypoint x="385" y="510" />
+        <di:waypoint x="440" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_social_to_combination_split_di" bpmnElement="flow_social_to_combination_split">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="570" y="130" />
+        <di:waypoint x="570" y="105" />
+        <di:waypoint x="600" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_financial_to_combination_split_di" bpmnElement="flow_financial_to_combination_split">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="570" y="105" />
+        <di:waypoint x="600" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_innovation_to_combination_split_di" bpmnElement="flow_innovation_to_combination_split">
+        <di:waypoint x="540" y="510" />
+        <di:waypoint x="570" y="510" />
+        <di:waypoint x="570" y="105" />
+        <di:waypoint x="600" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_combination_split_to_combination_di" bpmnElement="flow_combination_split_to_combination">
+        <di:waypoint x="650" y="105" />
+        <di:waypoint x="760" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_combination_to_grant_di" bpmnElement="flow_combination_to_grant">
+        <di:waypoint x="810" y="105" />
+        <di:waypoint x="865" y="105" />
+        <di:waypoint x="865" y="120" />
+        <di:waypoint x="920" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="845" y="100" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_grant_to_end_granted_di" bpmnElement="flow_grant_to_end_granted">
+        <di:waypoint x="1020" y="120" />
+        <di:waypoint x="1050" y="120" />
+        <di:waypoint x="1050" y="98" />
+        <di:waypoint x="1080" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_combination_to_end_rejected_di" bpmnElement="flow_combination_to_end_rejected">
+        <di:waypoint x="810" y="105" />
+        <di:waypoint x="865" y="105" />
+        <di:waypoint x="865" y="228" />
+        <di:waypoint x="920" y="228" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="845" y="208" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

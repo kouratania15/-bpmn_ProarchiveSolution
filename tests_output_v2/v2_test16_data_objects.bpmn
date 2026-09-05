@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_inscription_formation"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_message_flow_facture_service_financier" name="Facture envoyée" />
+  <bpmn:collaboration id="Collaboration_process_inscription_formation">
+    <bpmn:participant id="pool_universite" name="Université" processRef="pool_universite_process" />
+    <bpmn:participant id="pool_service_financier" name="Service Financier" processRef="pool_service_financier_process" />
+    <bpmn:messageFlow id="message_flow_facture_service_financier" name="Facture envoyée" sourceRef="task_envoyer_facture" targetRef="receive_event_facture" messageRef="Message_message_flow_facture_service_financier" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_universite_process" name="Université" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_etudiant" name="Étudiant">
+        <bpmn:flowNodeRef>start_event</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_inscription</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_secretariat" name="Secrétariat">
+        <bpmn:flowNodeRef>task_verification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_creation_dossier</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>data_formulaire_inscription</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_comptable" name="Comptable">
+        <bpmn:flowNodeRef>task_etablir_facture</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>data_bareme_tarifaire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_envoyer_facture</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>data_facture_scolarite</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_event" name="Début de l&#x27;inscription à une formation">
+      <bpmn:outgoing>flow_start_inscription</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_inscription" name="Étudiant s&#x27;inscrit à une formation">
+      <bpmn:incoming>flow_start_inscription</bpmn:incoming>
+      <bpmn:outgoing>flow_inscription_verification</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_verification" name="Secrétariat vérifie si l&#x27;étudiant est déjà inscrit dans le système">
+      <bpmn:incoming>flow_inscription_verification</bpmn:incoming>
+      <bpmn:outgoing>flow_verification_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_dossier" name="Étudiant déjà inscrit?">
+      <bpmn:incoming>flow_verification_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_creation_dossier</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_facture</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_creation_dossier" name="Créer le dossier étudiant en utilisant le formulaire d&#x27;inscription">
+      <bpmn:incoming>flow_gateway_creation_dossier</bpmn:incoming>
+      <bpmn:outgoing>flow_creation_dossier_facture</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:dataObject id="data_formulaire_inscription_obj" isCollection="false" />
+    <bpmn:dataObjectReference id="data_formulaire_inscription" name="Formulaire d&#x27;inscription" dataObjectRef="data_formulaire_inscription_obj" />
+    <bpmn:task id="task_etablir_facture" name="Établir la facture de scolarité en se basant sur le barème tarifaire">
+      <bpmn:incoming>flow_creation_dossier_facture</bpmn:incoming>
+      <bpmn:incoming>flow_gateway_facture</bpmn:incoming>
+      <bpmn:outgoing>flow_facture_envoyer</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:dataStoreReference id="data_bareme_tarifaire" name="Barème tarifaire" />
+    <bpmn:sendTask id="task_envoyer_facture" name="Envoyer la facture au service financier">
+      <bpmn:incoming>flow_facture_envoyer</bpmn:incoming>
+      <bpmn:outgoing>flow_envoyer_facture_end</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:dataObject id="data_facture_scolarite_obj" isCollection="false" />
+    <bpmn:dataObjectReference id="data_facture_scolarite" name="Facture de scolarité" dataObjectRef="data_facture_scolarite_obj" />
+    <bpmn:endEvent id="end_event" name="Fin du processus d&#x27;inscription">
+      <bpmn:incoming>flow_envoyer_facture_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_inscription" name="" sourceRef="start_event" targetRef="task_inscription">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_inscription_verification" name="" sourceRef="task_inscription" targetRef="task_verification">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_verification_gateway" name="" sourceRef="task_verification" targetRef="gateway_dossier">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_creation_dossier" name="Étudiant est nouveau" sourceRef="gateway_dossier" targetRef="task_creation_dossier">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_creation_dossier_facture" name="" sourceRef="task_creation_dossier" targetRef="task_etablir_facture">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_facture" name="Étudiant déjà inscrit" sourceRef="gateway_dossier" targetRef="task_etablir_facture">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_facture_envoyer" name="" sourceRef="task_etablir_facture" targetRef="task_envoyer_facture">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_envoyer_facture_end" name="" sourceRef="task_envoyer_facture" targetRef="end_event">
+    </bpmn:sequenceFlow>
+    <bpmn:association id="assoc_formulaire_creation_dossier" sourceRef="data_formulaire_inscription" targetRef="task_creation_dossier" />
+    <bpmn:association id="assoc_barème_facture" sourceRef="data_bareme_tarifaire" targetRef="task_etablir_facture" />
+    <bpmn:association id="assoc_facture_envoyer" sourceRef="task_etablir_facture" targetRef="data_facture_scolarite" />
+  </bpmn:process>
+  <bpmn:process id="pool_service_financier_process" name="Service Financier" isExecutable="true">
+    <bpmn:receiveTask id="receive_event_facture" name="Reception de la facture">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_service_financier&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_2</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="end_pool_service_financier" name="Fin (rattachement automatique)">
+      <bpmn:documentation>GAP: connexion automatique de secours — endEvent créé faute d&#x27;événement de fin exploitable ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — reçoit une transition de secours depuis &#x27;receive_event_facture&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_2" name="" sourceRef="receive_event_facture" targetRef="end_pool_service_financier">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_inscription_formation">
+      <bpmndi:BPMNShape id="pool_universite_di" bpmnElement="pool_universite" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1140" height="680" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_service_financier_di" bpmnElement="pool_service_financier" isHorizontal="true">
+        <dc:Bounds x="60" y="770" width="1376" height="256" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_etudiant_di" bpmnElement="lane_etudiant" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="1110" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_secretariat_di" bpmnElement="lane_secretariat" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="1110" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_comptable_di" bpmnElement="lane_comptable" isHorizontal="true">
+        <dc:Bounds x="90" y="430" width="1110" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_inscription_di" bpmnElement="task_inscription">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verification_di" bpmnElement="task_verification">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_dossier_di" bpmnElement="gateway_dossier">
+        <dc:Bounds x="600" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_creation_dossier_di" bpmnElement="task_creation_dossier">
+        <dc:Bounds x="760" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="data_formulaire_inscription_di" bpmnElement="data_formulaire_inscription">
+        <dc:Bounds x="792" y="190" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_etablir_facture_di" bpmnElement="task_etablir_facture">
+        <dc:Bounds x="760" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="data_bareme_tarifaire_di" bpmnElement="data_bareme_tarifaire">
+        <dc:Bounds x="785" y="490" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_envoyer_facture_di" bpmnElement="task_envoyer_facture">
+        <dc:Bounds x="920" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="data_facture_scolarite_di" bpmnElement="data_facture_scolarite">
+        <dc:Bounds x="858" y="490" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_di" bpmnElement="end_event">
+        <dc:Bounds x="1080" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="receive_event_facture_di" bpmnElement="receive_event_facture">
+        <dc:Bounds x="1080" y="876" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_pool_service_financier_di" bpmnElement="end_pool_service_financier">
+        <dc:Bounds x="1240" y="810" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_inscription_di" bpmnElement="flow_start_inscription">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_inscription_verification_di" bpmnElement="flow_inscription_verification">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="320" />
+        <di:waypoint x="440" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verification_gateway_di" bpmnElement="flow_verification_gateway">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="570" y="105" />
+        <di:waypoint x="600" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_creation_dossier_di" bpmnElement="flow_gateway_creation_dossier">
+        <di:waypoint x="650" y="105" />
+        <di:waypoint x="705" y="105" />
+        <di:waypoint x="705" y="320" />
+        <di:waypoint x="760" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="300" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_creation_dossier_facture_di" bpmnElement="flow_creation_dossier_facture">
+        <di:waypoint x="860" y="320" />
+        <di:waypoint x="890" y="320" />
+        <di:waypoint x="890" y="680" />
+        <di:waypoint x="730" y="680" />
+        <di:waypoint x="730" y="620" />
+        <di:waypoint x="760" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_facture_di" bpmnElement="flow_gateway_facture">
+        <di:waypoint x="650" y="105" />
+        <di:waypoint x="705" y="105" />
+        <di:waypoint x="705" y="620" />
+        <di:waypoint x="760" y="620" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="600" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_facture_envoyer_di" bpmnElement="flow_facture_envoyer">
+        <di:waypoint x="860" y="620" />
+        <di:waypoint x="890" y="620" />
+        <di:waypoint x="890" y="510" />
+        <di:waypoint x="920" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_envoyer_facture_end_di" bpmnElement="flow_envoyer_facture_end">
+        <di:waypoint x="1020" y="510" />
+        <di:waypoint x="1050" y="510" />
+        <di:waypoint x="1050" y="98" />
+        <di:waypoint x="1080" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="1180" y="916" />
+        <di:waypoint x="1210" y="916" />
+        <di:waypoint x="1210" y="828" />
+        <di:waypoint x="1240" y="828" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="message_flow_facture_service_financier_di" bpmnElement="message_flow_facture_service_financier">
+        <di:waypoint x="1020" y="510" />
+        <di:waypoint x="1050" y="510" />
+        <di:waypoint x="1050" y="916" />
+        <di:waypoint x="1080" y="916" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1030" y="896" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc_formulaire_creation_dossier_di" bpmnElement="assoc_formulaire_creation_dossier">
+        <di:waypoint x="828" y="215" />
+        <di:waypoint x="858" y="215" />
+        <di:waypoint x="858" y="380" />
+        <di:waypoint x="730" y="380" />
+        <di:waypoint x="730" y="320" />
+        <di:waypoint x="760" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc_barème_facture_di" bpmnElement="assoc_barème_facture">
+        <di:waypoint x="835" y="515" />
+        <di:waypoint x="865" y="515" />
+        <di:waypoint x="865" y="680" />
+        <di:waypoint x="730" y="680" />
+        <di:waypoint x="730" y="620" />
+        <di:waypoint x="760" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="assoc_facture_envoyer_di" bpmnElement="assoc_facture_envoyer">
+        <di:waypoint x="860" y="620" />
+        <di:waypoint x="890" y="620" />
+        <di:waypoint x="890" y="680" />
+        <di:waypoint x="828" y="680" />
+        <di:waypoint x="828" y="515" />
+        <di:waypoint x="858" y="515" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

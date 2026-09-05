@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_process_relecture_memoire" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.49.0">
+  <bpmn:collaboration id="Collaboration_process_relecture_memoire">
+    <bpmn:participant id="pool_universite" name="Université" processRef="process_relecture_memoire" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_relecture_memoire" name="Université" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_directeur" name="Directeur de recherche">
+        <bpmn:flowNodeRef>task_directeur_verifie_contenu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_directeur_valide_memoire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>end_event_memoire_valide</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_etudiant" name="Étudiant">
+        <bpmn:flowNodeRef>start_event_memoire_soumis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_etudiant_soumet_memoire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gateway_corrections_necessaires</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_etudiant_revise_memoire</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_etudiant_soumet_nouveau_memoire</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_event_memoire_soumis" name="Mémoire soumis pour relecture">
+      <bpmn:outgoing>flow_start_soumet_memoire</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_etudiant_soumet_memoire" name="Étudiant soumet son mémoire pour relecture">
+      <bpmn:incoming>flow_start_soumet_memoire</bpmn:incoming>
+      <bpmn:outgoing>flow_soumet_verifie</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_directeur_verifie_contenu" name="Directeur vérifie le contenu du mémoire">
+      <bpmn:incoming>flow_soumet_verifie</bpmn:incoming>
+      <bpmn:incoming>flow_soumet_nouveau_verifie</bpmn:incoming>
+      <bpmn:outgoing>flow_verifie_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_corrections_necessaires" name="Corrections nécessaires ?">
+      <bpmn:incoming>flow_verifie_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_corrections_necessaires_revise</bpmn:outgoing>
+      <bpmn:outgoing>flow_corrections_necessaires_valide</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_etudiant_revise_memoire" name="Étudiant révise le mémoire">
+      <bpmn:incoming>flow_corrections_necessaires_revise</bpmn:incoming>
+      <bpmn:outgoing>flow_revise_soumet_nouveau</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_etudiant_soumet_nouveau_memoire" name="Étudiant soumet à nouveau le mémoire">
+      <bpmn:incoming>flow_revise_soumet_nouveau</bpmn:incoming>
+      <bpmn:outgoing>flow_soumet_nouveau_verifie</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_directeur_valide_memoire" name="Directeur valide le mémoire">
+      <bpmn:incoming>flow_corrections_necessaires_valide</bpmn:incoming>
+      <bpmn:outgoing>flow_valide_memoire_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_memoire_valide" name="Mémoire validé">
+      <bpmn:incoming>flow_valide_memoire_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_soumet_memoire" name="" sourceRef="start_event_memoire_soumis" targetRef="task_etudiant_soumet_memoire" />
+    <bpmn:sequenceFlow id="flow_soumet_verifie" name="" sourceRef="task_etudiant_soumet_memoire" targetRef="task_directeur_verifie_contenu" />
+    <bpmn:sequenceFlow id="flow_soumet_nouveau_verifie" name="" sourceRef="task_etudiant_soumet_nouveau_memoire" targetRef="task_directeur_verifie_contenu" />
+    <bpmn:sequenceFlow id="flow_verifie_gateway" name="" sourceRef="task_directeur_verifie_contenu" targetRef="gateway_corrections_necessaires" />
+    <bpmn:sequenceFlow id="flow_corrections_necessaires_revise" name="Oui" sourceRef="gateway_corrections_necessaires" targetRef="task_etudiant_revise_memoire" />
+    <bpmn:sequenceFlow id="flow_corrections_necessaires_valide" name="Non" sourceRef="gateway_corrections_necessaires" targetRef="task_directeur_valide_memoire" />
+    <bpmn:sequenceFlow id="flow_revise_soumet_nouveau" name="" sourceRef="task_etudiant_revise_memoire" targetRef="task_etudiant_soumet_nouveau_memoire" />
+    <bpmn:sequenceFlow id="flow_valide_memoire_end" name="" sourceRef="task_directeur_valide_memoire" targetRef="end_event_memoire_valide" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_relecture_memoire">
+      <bpmndi:BPMNShape id="pool_universite_di" bpmnElement="pool_universite" isHorizontal="true">
+        <dc:Bounds x="160" y="50" width="1140" height="490" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_directeur_di" bpmnElement="lane_directeur" isHorizontal="true">
+        <dc:Bounds x="190" y="240" width="1110" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_etudiant_di" bpmnElement="lane_etudiant" isHorizontal="true">
+        <dc:Bounds x="190" y="50" width="1110" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_memoire_soumis_di" bpmnElement="start_event_memoire_soumis">
+        <dc:Bounds x="220" y="90" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="198" y="126" width="81" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_etudiant_soumet_memoire_di" bpmnElement="task_etudiant_soumet_memoire">
+        <dc:Bounds x="380" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_directeur_verifie_contenu_di" bpmnElement="task_directeur_verifie_contenu">
+        <dc:Bounds x="540" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_corrections_necessaires_di" bpmnElement="gateway_corrections_necessaires" isMarkerVisible="true">
+        <dc:Bounds x="700" y="80" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="691" y="130" width="68" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_etudiant_revise_memoire_di" bpmnElement="task_etudiant_revise_memoire">
+        <dc:Bounds x="860" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_etudiant_soumet_nouveau_memoire_di" bpmnElement="task_etudiant_soumet_nouveau_memoire">
+        <dc:Bounds x="1020" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_directeur_valide_memoire_di" bpmnElement="task_directeur_valide_memoire">
+        <dc:Bounds x="860" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_memoire_valide_di" bpmnElement="end_event_memoire_valide">
+        <dc:Bounds x="1020" y="390" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1001" y="426" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_soumet_memoire_di" bpmnElement="flow_start_soumet_memoire">
+        <di:waypoint x="256" y="108" />
+        <di:waypoint x="318" y="108" />
+        <di:waypoint x="318" y="130" />
+        <di:waypoint x="380" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumet_verifie_di" bpmnElement="flow_soumet_verifie">
+        <di:waypoint x="480" y="130" />
+        <di:waypoint x="510" y="130" />
+        <di:waypoint x="510" y="320" />
+        <di:waypoint x="540" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verifie_gateway_di" bpmnElement="flow_verifie_gateway">
+        <di:waypoint x="640" y="320" />
+        <di:waypoint x="670" y="320" />
+        <di:waypoint x="670" y="105" />
+        <di:waypoint x="700" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_corrections_necessaires_revise_di" bpmnElement="flow_corrections_necessaires_revise">
+        <di:waypoint x="750" y="105" />
+        <di:waypoint x="805" y="105" />
+        <di:waypoint x="805" y="130" />
+        <di:waypoint x="860" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="806" y="110" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_revise_soumet_nouveau_di" bpmnElement="flow_revise_soumet_nouveau">
+        <di:waypoint x="960" y="130" />
+        <di:waypoint x="1020" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumet_nouveau_verifie_di" bpmnElement="flow_soumet_nouveau_verifie">
+        <di:waypoint x="1120" y="130" />
+        <di:waypoint x="1150" y="130" />
+        <di:waypoint x="1150" y="380" />
+        <di:waypoint x="540" y="370" />
+        <di:waypoint x="510" y="380" />
+        <di:waypoint x="510" y="320" />
+        <di:waypoint x="540" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_corrections_necessaires_valide_di" bpmnElement="flow_corrections_necessaires_valide">
+        <di:waypoint x="750" y="105" />
+        <di:waypoint x="805" y="105" />
+        <di:waypoint x="805" y="430" />
+        <di:waypoint x="860" y="430" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="805" y="410" width="21" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_valide_memoire_end_di" bpmnElement="flow_valide_memoire_end">
+        <di:waypoint x="960" y="430" />
+        <di:waypoint x="990" y="430" />
+        <di:waypoint x="990" y="408" />
+        <di:waypoint x="1020" y="408" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

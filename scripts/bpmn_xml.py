@@ -27,7 +27,162 @@ EVENT_DEF_TAGS = {
     "escalation": "escalationEventDefinition",
     "conditional": "conditionalEventDefinition",
     "compensation": "compensateEventDefinition",
+    "link": "linkEventDefinition",
+    "cancel": "cancelEventDefinition",
 }
+
+LOOP_CHARACTERISTICS_TAGS = {
+    "multiInstanceParallel": ('bpmn:multiInstanceLoopCharacteristics', ' isSequential="false"'),
+    "multiInstanceSequential": ('bpmn:multiInstanceLoopCharacteristics', ' isSequential="true"'),
+    "standardLoop": ('bpmn:standardLoopCharacteristics', ''),
+}
+
+
+def _emit_loop_characteristics(lines: list[str], node: dict[str, Any], indent: str) -> None:
+    """Émet le marqueur de boucle (multi-instance parallèle/séquentiel ou boucle
+    standard) uniquement si explicitement renseigné — jamais par défaut."""
+    loop = node.get("loopCharacteristics")
+    if not isinstance(loop, str) or loop == "none" or loop not in LOOP_CHARACTERISTICS_TAGS:
+        return
+    tag, attrs = LOOP_CHARACTERISTICS_TAGS[loop]
+    collection = node.get("loopCollection")
+    if collection and loop.startswith("multiInstance"):
+        lines.append(f'{indent}<{tag}{attrs}>')
+        lines.append(f'{indent}  <bpmn:loopDataInputRef>{collection}</bpmn:loopDataInputRef>')
+        lines.append(f'{indent}</{tag}>')
+    else:
+        lines.append(f'{indent}<{tag}{attrs} />')
+
+
+def _emit_flow_node(
+    lines: list[str],
+    node: dict[str, Any],
+    indent: str,
+    incoming_map: dict[str, list[str]],
+    outgoing_map: dict[str, list[str]],
+    seq_edges: list[dict[str, Any]],
+    process_node_ids_set: set[str],
+    children_by_parent: dict[str, list[dict[str, Any]]],
+) -> None:
+    """Émet un flowNode et, s'il s'agit d'un subProcess, ses enfants imbriqués
+    (parentSubProcessId) ainsi que les sequenceFlow qui les relient ENTRE EUX,
+    récursivement. Sans cette imbrication, un subProcess ne serait qu'une coquille
+    vide dans le XML : ses enfants apparaîtraient à plat comme frères du process,
+    perdant toute relation de containment BPMN."""
+    nid = node.get("id")
+    ntype = str(node.get("type", "task"))
+    nname = _esc(node.get("name", ""))
+    doc = node.get("documentation")
+    ev_def = node.get("eventDefinition")
+    ev_detail = node.get("eventDetail")
+
+    if ntype == "boundaryEvent":
+        host_ref = node.get("attachedToRef", "")
+        cancel_act = "true" if node.get("cancelActivity", True) else "false"
+        lines.append(f'{indent}<bpmn:boundaryEvent id="{nid}" name="{nname}" attachedToRef="{host_ref}" cancelActivity="{cancel_act}">')
+        if doc:
+            lines.append(f'{indent}  <bpmn:documentation>{_esc(doc)}</bpmn:documentation>')
+        for edge_id in outgoing_map.get(nid, []):
+            if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
+                lines.append(f'{indent}  <bpmn:outgoing>{edge_id}</bpmn:outgoing>')
+        if isinstance(ev_def, str) and ev_def in EVENT_DEF_TAGS:
+            tag = EVENT_DEF_TAGS[ev_def]
+            lines.append(f'{indent}  <bpmn:{tag} id="{nid}_def">')
+            if ev_def == "timer" and ev_detail:
+                lines.append(f'{indent}    <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">{_esc(ev_detail)}</bpmn:timeDuration>')
+            lines.append(f'{indent}  </bpmn:{tag}>')
+        lines.append(f'{indent}</bpmn:boundaryEvent>')
+        return
+
+    if ntype == "subProcess":
+        # Un sous-processus transactionnel est un ÉLÉMENT XML distinct en BPMN 2.0
+        # (bpmn:transaction, bordure double), pas un simple bpmn:subProcess avec un
+        # attribut — cf. BUG 7 de rapport_tests_v2.md : sans ce tag dédié, aucune
+        # sémantique de transaction/annulation groupée n'est portée par le XML,
+        # quel que soit le contenu (cancelEndEvent, compensations) à l'intérieur.
+        is_transaction = bool(node.get("isTransaction"))
+        tag_name = "bpmn:transaction" if is_transaction else "bpmn:subProcess"
+        triggered_attr = ' triggeredByEvent="true"' if node.get("triggeredByEvent") else ""
+        compensation_attr = ' isForCompensation="true"' if node.get("isForCompensation") else ""
+        lines.append(f'{indent}<{tag_name} id="{nid}" name="{nname}"{triggered_attr}{compensation_attr}>')
+        if doc:
+            lines.append(f'{indent}  <bpmn:documentation>{_esc(doc)}</bpmn:documentation>')
+        for edge_id in incoming_map.get(nid, []):
+            if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
+                lines.append(f'{indent}  <bpmn:incoming>{edge_id}</bpmn:incoming>')
+        for edge_id in outgoing_map.get(nid, []):
+            if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
+                lines.append(f'{indent}  <bpmn:outgoing>{edge_id}</bpmn:outgoing>')
+        _emit_loop_characteristics(lines, node, indent + "  ")
+
+        children = children_by_parent.get(nid, [])
+        child_ids = {c.get("id") for c in children if isinstance(c.get("id"), str)}
+        for child in children:
+            _emit_flow_node(lines, child, indent + "  ", incoming_map, outgoing_map, seq_edges, process_node_ids_set, children_by_parent)
+
+        for edge in seq_edges:
+            eid, src, tgt = edge.get("id"), edge.get("source"), edge.get("target")
+            if not isinstance(eid, str) or src not in child_ids or tgt not in child_ids:
+                continue
+            lines.append(f'{indent}  <bpmn:sequenceFlow id="{eid}" name="{_esc(edge.get("name", ""))}" sourceRef="{src}" targetRef="{tgt}">')
+            if edge.get("condition"):
+                lines.append(f'{indent}    <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">{_esc(edge["condition"])}</bpmn:conditionExpression>')
+            lines.append(f'{indent}  </bpmn:sequenceFlow>')
+
+        lines.append(f'{indent}</{tag_name}>')
+        return
+
+    if ntype in ("dataObjectReference", "dataInput", "dataOutput"):
+        # dataInput/dataOutput (portée processus) sont modélisés comme des
+        # dataObjectReference — BPMN 2.0 les distingue formellement via
+        # ioSpecification, une construction lourde rarement rendue visuellement ;
+        # le nom du nœud porte la distinction sémantique. isCollection est porté
+        # par l'objet référencé (bpmn:dataObject), pas par la référence elle-même,
+        # pour que les viewers affichent correctement le marqueur "III".
+        obj_id = f"{nid}_obj"
+        is_collection = "true" if node.get("isCollection") else "false"
+        lines.append(f'{indent}<bpmn:dataObject id="{obj_id}" isCollection="{is_collection}" />')
+        lines.append(f'{indent}<bpmn:dataObjectReference id="{nid}" name="{nname}" dataObjectRef="{obj_id}" />')
+        return
+
+    if ntype == "dataStoreReference":
+        lines.append(f'{indent}<bpmn:dataStoreReference id="{nid}" name="{nname}" />')
+        return
+
+    if ntype == "textAnnotation":
+        lines.append(f'{indent}<bpmn:textAnnotation id="{nid}"><bpmn:text>{nname}</bpmn:text></bpmn:textAnnotation>')
+        return
+
+    default_attr = ""
+    if ntype == "exclusiveGateway":
+        default_edge = next((edge for edge in seq_edges if edge.get("source") == nid and edge.get("isDefault") and edge.get("target") in process_node_ids_set), None)
+        if default_edge is not None:
+            default_attr = f' default="{default_edge["id"]}"'
+    compensation_attr = ' isForCompensation="true"' if node.get("isForCompensation") else ""
+
+    lines.append(f'{indent}<bpmn:{ntype} id="{nid}" name="{nname}"{default_attr}{compensation_attr}>')
+    if doc:
+        lines.append(f'{indent}  <bpmn:documentation>{_esc(doc)}</bpmn:documentation>')
+
+    for edge_id in incoming_map.get(nid, []):
+        if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
+            lines.append(f'{indent}  <bpmn:incoming>{edge_id}</bpmn:incoming>')
+    for edge_id in outgoing_map.get(nid, []):
+        if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
+            lines.append(f'{indent}  <bpmn:outgoing>{edge_id}</bpmn:outgoing>')
+
+    if isinstance(ev_def, str) and ev_def in EVENT_DEF_TAGS:
+        tag = EVENT_DEF_TAGS[ev_def]
+        if ev_def == "link":
+            # Le nom du lien (pas son id) fait office de clé d'appariement throw/catch.
+            lines.append(f'{indent}  <bpmn:{tag} id="{nid}_def" name="{_esc(ev_detail or nname)}" />')
+        else:
+            lines.append(f'{indent}  <bpmn:{tag} id="{nid}_def">')
+            if ev_def == "timer" and ev_detail:
+                lines.append(f'{indent}    <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">{_esc(ev_detail)}</bpmn:timeDuration>')
+            lines.append(f'{indent}  </bpmn:{tag}>')
+    _emit_loop_characteristics(lines, node, indent + "  ")
+    lines.append(f'{indent}</bpmn:{ntype}>')
 
 
 def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any]) -> str:
@@ -53,6 +208,16 @@ def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any])
         if isinstance(pool_id, str) and pool_id in pool_by_id:
             node_to_pool[node.get("id")] = pool_id
 
+    # Un enfant de subProcess (parentSubProcessId) n'a normalement pas besoin de son
+    # propre poolId : il hérite de celui de son subProcess parent, transitivement.
+    subprocess_ids = {n.get("id") for n in nodes if n.get("type") == "subProcess" and isinstance(n.get("id"), str)}
+    children_by_parent: dict[str, list[dict[str, Any]]] = {}
+    for n in nodes:
+        parent = n.get("parentSubProcessId")
+        if isinstance(parent, str) and parent in subprocess_ids:
+            children_by_parent.setdefault(parent, []).append(n)
+    all_child_ids = {c.get("id") for kids in children_by_parent.values() for c in kids if isinstance(c.get("id"), str)}
+
     pool_process_ids: dict[str, str] = {}
     process_node_ids: dict[str, set[str]] = {}
     process_nodes_by_id: dict[str, list[dict[str, Any]]] = {}
@@ -64,6 +229,19 @@ def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any])
             if not isinstance(pid, str):
                 continue
             pool_nodes = [node for node in nodes if node.get("poolId") == pid]
+            pool_node_id_set = {n.get("id") for n in pool_nodes}
+            changed = True
+            while changed:
+                changed = False
+                for n in nodes:
+                    nid = n.get("id")
+                    if nid in pool_node_id_set:
+                        continue
+                    parent = n.get("parentSubProcessId")
+                    if isinstance(parent, str) and parent in pool_node_id_set:
+                        pool_nodes.append(n)
+                        pool_node_id_set.add(nid)
+                        changed = True
             if not pool_nodes:
                 continue
             process_id = str(pool.get("processRef") or (default_process_id if len(pools) == 1 else f"{pid}_process"))
@@ -196,61 +374,20 @@ def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any])
                 lname = _esc(lane.get("name", ""))
                 lines.append(f'      <bpmn:lane id="{lid}" name="{lname}">')
                 for node in process_nodes:
-                    if node.get("laneId") == lid:
+                    # Un enfant de subProcess n'est jamais référencé directement par la
+                    # lane externe : il est contenu dans le subProcess, pas un flowNode
+                    # de premier niveau dans cette lane.
+                    if node.get("laneId") == lid and node.get("id") not in all_child_ids:
                         lines.append(f'        <bpmn:flowNodeRef>{node["id"]}</bpmn:flowNodeRef>')
                 lines.append('      </bpmn:lane>')
             lines.append('    </bpmn:laneSet>')
 
+        # Les enfants de subProcess sont émis à l'intérieur de leur parent (voir
+        # _emit_flow_node), jamais comme frères directs du process.
         for node in process_nodes:
-            nid = node.get("id")
-            ntype = str(node.get("type", "task"))
-            nname = _esc(node.get("name", ""))
-            doc = node.get("documentation")
-            ev_def = node.get("eventDefinition")
-            ev_detail = node.get("eventDetail")
-
-            if ntype == "boundaryEvent":
-                host_ref = node.get("attachedToRef", "")
-                cancel_act = "true" if node.get("cancelActivity", True) else "false"
-                lines.append(f'    <bpmn:boundaryEvent id="{nid}" name="{nname}" attachedToRef="{host_ref}" cancelActivity="{cancel_act}">')
-                if doc:
-                    lines.append(f'      <bpmn:documentation>{_esc(doc)}</bpmn:documentation>')
-                for edge_id in outgoing_map.get(nid, []):
-                    if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
-                        lines.append(f'      <bpmn:outgoing>{edge_id}</bpmn:outgoing>')
-                if isinstance(ev_def, str) and ev_def in EVENT_DEF_TAGS:
-                    tag = EVENT_DEF_TAGS[ev_def]
-                    lines.append(f'      <bpmn:{tag} id="{nid}_def">')
-                    if ev_def == "timer" and ev_detail:
-                        lines.append(f'        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">{_esc(ev_detail)}</bpmn:timeDuration>')
-                    lines.append(f'      </bpmn:{tag}>')
-                lines.append('    </bpmn:boundaryEvent>')
+            if node.get("id") in all_child_ids:
                 continue
-
-            default_attr = ""
-            if ntype == "exclusiveGateway":
-                default_edge = next((edge for edge in seq_edges if edge.get("source") == nid and edge.get("isDefault") and edge.get("target") in process_node_ids_set), None)
-                if default_edge is not None:
-                    default_attr = f' default="{default_edge["id"]}"'
-
-            lines.append(f'    <bpmn:{ntype} id="{nid}" name="{nname}"{default_attr}>')
-            if doc:
-                lines.append(f'      <bpmn:documentation>{_esc(doc)}</bpmn:documentation>')
-
-            for edge_id in incoming_map.get(nid, []):
-                if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
-                    lines.append(f'      <bpmn:incoming>{edge_id}</bpmn:incoming>')
-            for edge_id in outgoing_map.get(nid, []):
-                if any(edge.get("id") == edge_id and edge.get("source") in process_node_ids_set and edge.get("target") in process_node_ids_set for edge in seq_edges):
-                    lines.append(f'      <bpmn:outgoing>{edge_id}</bpmn:outgoing>')
-
-            if isinstance(ev_def, str) and ev_def in EVENT_DEF_TAGS:
-                tag = EVENT_DEF_TAGS[ev_def]
-                lines.append(f'      <bpmn:{tag} id="{nid}_def">')
-                if ev_def == "timer" and ev_detail:
-                    lines.append(f'        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">{_esc(ev_detail)}</bpmn:timeDuration>')
-                lines.append(f'      </bpmn:{tag}>')
-            lines.append(f'    </bpmn:{ntype}>')
+            _emit_flow_node(lines, node, "    ", incoming_map, outgoing_map, seq_edges, process_node_ids_set, children_by_parent)
 
         for edge in seq_edges:
             eid = edge.get("id")
@@ -259,6 +396,15 @@ def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any])
             if not isinstance(eid, str) or not isinstance(src, str) or not isinstance(tgt, str):
                 continue
             if src not in process_node_ids_set or tgt not in process_node_ids_set:
+                continue
+            if src in all_child_ids or tgt in all_child_ids:
+                # Un sequenceFlow touchant un enfant de subProcess ne peut jamais être
+                # émis au niveau du process englobant (BPMN interdit de relier un
+                # élément imbriqué à un élément extérieur à son subProcess) : soit il a
+                # déjà été émis à l'intérieur du subProcess parent (deux enfants du
+                # même subProcess), soit c'est une arête invalide qui traverse la
+                # frontière du subProcess (ex: subProcess -> son propre enfant) —
+                # dans les deux cas, elle ne doit pas apparaître ici.
                 continue
             lines.append(f'    <bpmn:sequenceFlow id="{eid}" name="{_esc(edge.get("name", ""))}" sourceRef="{src}" targetRef="{tgt}">')
             if edge.get("condition"):
@@ -302,7 +448,13 @@ def generate_bpmn_xml(logic_core: dict[str, Any], layout_result: dict[str, Any])
         if not isinstance(nid, str):
             continue
         pos = node_positions.get(nid, {"x": 100, "y": 100, "width": 120, "height": 80})
-        lines.append(f'      <bpmndi:BPMNShape id="{nid}_di" bpmnElement="{nid}">')
+        # Un subProcess DOIT déclarer isExpanded explicitement : sans cet attribut,
+        # chaque viewer BPMN choisit son propre défaut (certains l'affichent réduit,
+        # d'autres développé), ce qui produit un rendu incohérent d'un outil à
+        # l'autre pour la même donnée. On l'affiche toujours développé par défaut,
+        # puisque la génération produit systématiquement la structure complète.
+        expanded_attr = ' isExpanded="true"' if node.get("type") == "subProcess" else ""
+        lines.append(f'      <bpmndi:BPMNShape id="{nid}_di" bpmnElement="{nid}"{expanded_attr}>')
         lines.append(f'        <dc:Bounds x="{int(pos["x"])}" y="{int(pos["y"])}" width="{int(pos["width"])}" height="{int(pos["height"])}" />')
         lines.append('      </bpmndi:BPMNShape>')
 

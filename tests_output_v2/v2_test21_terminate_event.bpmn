@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_quality_control"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_quality_control">
+    <bpmn:participant id="pool_usine" name="Usine" processRef="process_quality_control" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_quality_control" name="Usine" isExecutable="true">
+    <bpmn:startEvent id="start_event" name="Début du processus de contrôle qualité">
+      <bpmn:outgoing>flow_start_to_parallel_gateway_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_visual_inspection" name="Contrôle visuel">
+      <bpmn:incoming>flow_parallel_gateway_start_to_visual_inspection</bpmn:incoming>
+      <bpmn:outgoing>flow_visual_inspection_to_parallel_gateway_join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_dimension_check" name="Contrôle dimensionnel">
+      <bpmn:incoming>flow_parallel_gateway_start_to_dimension_check</bpmn:incoming>
+      <bpmn:outgoing>flow_dimension_check_to_parallel_gateway_join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_strength_test" name="Test de résistance">
+      <bpmn:incoming>flow_parallel_gateway_start_to_strength_test</bpmn:incoming>
+      <bpmn:outgoing>flow_strength_test_to_parallel_gateway_join</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="boundary_event_critical_defect" name="Détection d&#x27;un défaut critique" attachedToRef="task_strength_test" cancelActivity="true">
+      <bpmn:outgoing>flow_critical_defect_to_end_event_critical_defect</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="boundary_event_critical_defect_def">
+      </bpmn:errorEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="task_stop_process" name="Arrêt du processus">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux principal depuis &#x27;parallel_gateway_join&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_validate_batch" name="Validation du lot pour expédition">
+      <bpmn:incoming>flow_parallel_gateway_join_to_validate_batch</bpmn:incoming>
+      <bpmn:outgoing>flow_validate_batch_to_end_event_no_critical_defect</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_no_critical_defect" name="Lot validé pour expédition">
+      <bpmn:documentation>GAP: connexion automatique de secours — reçoit une transition de secours depuis &#x27;task_stop_process&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_validate_batch_to_end_event_no_critical_defect</bpmn:incoming>
+      <bpmn:incoming>flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_event_critical_defect" name="Processus arrêté en raison d&#x27;un défaut critique">
+      <bpmn:incoming>flow_critical_defect_to_end_event_critical_defect</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="parallel_gateway_start" name="Lancement des contrôles parallèles">
+      <bpmn:incoming>flow_start_to_parallel_gateway_start</bpmn:incoming>
+      <bpmn:outgoing>flow_parallel_gateway_start_to_visual_inspection</bpmn:outgoing>
+      <bpmn:outgoing>flow_parallel_gateway_start_to_dimension_check</bpmn:outgoing>
+      <bpmn:outgoing>flow_parallel_gateway_start_to_strength_test</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:parallelGateway id="parallel_gateway_join" name="Validation des contrôles">
+      <bpmn:incoming>flow_visual_inspection_to_parallel_gateway_join</bpmn:incoming>
+      <bpmn:incoming>flow_dimension_check_to_parallel_gateway_join</bpmn:incoming>
+      <bpmn:incoming>flow_strength_test_to_parallel_gateway_join</bpmn:incoming>
+      <bpmn:outgoing>flow_parallel_gateway_join_to_validate_batch</bpmn:outgoing>
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="flow_start_to_parallel_gateway_start" name="" sourceRef="start_event" targetRef="parallel_gateway_start">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_gateway_start_to_visual_inspection" name="" sourceRef="parallel_gateway_start" targetRef="task_visual_inspection">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_gateway_start_to_dimension_check" name="" sourceRef="parallel_gateway_start" targetRef="task_dimension_check">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_gateway_start_to_strength_test" name="" sourceRef="parallel_gateway_start" targetRef="task_strength_test">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_visual_inspection_to_parallel_gateway_join" name="" sourceRef="task_visual_inspection" targetRef="parallel_gateway_join">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_dimension_check_to_parallel_gateway_join" name="" sourceRef="task_dimension_check" targetRef="parallel_gateway_join">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_strength_test_to_parallel_gateway_join" name="" sourceRef="task_strength_test" targetRef="parallel_gateway_join">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_critical_defect_to_end_event_critical_defect" name="" sourceRef="boundary_event_critical_defect" targetRef="end_event_critical_defect">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_parallel_gateway_join_to_validate_batch" name="" sourceRef="parallel_gateway_join" targetRef="task_validate_batch">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_validate_batch_to_end_event_no_critical_defect" name="" sourceRef="task_validate_batch" targetRef="end_event_no_critical_defect">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="parallel_gateway_join" targetRef="task_stop_process">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_2" name="" sourceRef="task_stop_process" targetRef="end_event_no_critical_defect">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_quality_control">
+      <bpmndi:BPMNShape id="pool_usine_di" bpmnElement="pool_usine" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1056" height="476" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_visual_inspection_di" bpmnElement="task_visual_inspection">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_dimension_check_di" bpmnElement="task_dimension_check">
+        <dc:Bounds x="440" y="266" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_strength_test_di" bpmnElement="task_strength_test">
+        <dc:Bounds x="440" y="376" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="boundary_event_critical_defect_di" bpmnElement="boundary_event_critical_defect">
+        <dc:Bounds x="522" y="438" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_stop_process_di" bpmnElement="task_stop_process">
+        <dc:Bounds x="760" y="266" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_validate_batch_di" bpmnElement="task_validate_batch">
+        <dc:Bounds x="760" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_no_critical_defect_di" bpmnElement="end_event_no_critical_defect">
+        <dc:Bounds x="920" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_critical_defect_di" bpmnElement="end_event_critical_defect">
+        <dc:Bounds x="120" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="parallel_gateway_start_di" bpmnElement="parallel_gateway_start">
+        <dc:Bounds x="280" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="parallel_gateway_join_di" bpmnElement="parallel_gateway_join">
+        <dc:Bounds x="600" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_parallel_gateway_start_di" bpmnElement="flow_start_to_parallel_gateway_start">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="115" />
+        <di:waypoint x="280" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_gateway_start_to_visual_inspection_di" bpmnElement="flow_parallel_gateway_start_to_visual_inspection">
+        <di:waypoint x="330" y="115" />
+        <di:waypoint x="385" y="115" />
+        <di:waypoint x="385" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_gateway_start_to_dimension_check_di" bpmnElement="flow_parallel_gateway_start_to_dimension_check">
+        <di:waypoint x="330" y="115" />
+        <di:waypoint x="385" y="115" />
+        <di:waypoint x="385" y="306" />
+        <di:waypoint x="440" y="306" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_gateway_start_to_strength_test_di" bpmnElement="flow_parallel_gateway_start_to_strength_test">
+        <di:waypoint x="330" y="115" />
+        <di:waypoint x="385" y="115" />
+        <di:waypoint x="385" y="416" />
+        <di:waypoint x="440" y="416" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_visual_inspection_to_parallel_gateway_join_di" bpmnElement="flow_visual_inspection_to_parallel_gateway_join">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="570" y="130" />
+        <di:waypoint x="570" y="115" />
+        <di:waypoint x="600" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_dimension_check_to_parallel_gateway_join_di" bpmnElement="flow_dimension_check_to_parallel_gateway_join">
+        <di:waypoint x="540" y="306" />
+        <di:waypoint x="570" y="306" />
+        <di:waypoint x="570" y="115" />
+        <di:waypoint x="600" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_strength_test_to_parallel_gateway_join_di" bpmnElement="flow_strength_test_to_parallel_gateway_join">
+        <di:waypoint x="540" y="416" />
+        <di:waypoint x="570" y="416" />
+        <di:waypoint x="570" y="115" />
+        <di:waypoint x="600" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_critical_defect_to_end_event_critical_defect_di" bpmnElement="flow_critical_defect_to_end_event_critical_defect">
+        <di:waypoint x="540" y="474" />
+        <di:waypoint x="570" y="474" />
+        <di:waypoint x="570" y="534" />
+        <di:waypoint x="90" y="534" />
+        <di:waypoint x="90" y="218" />
+        <di:waypoint x="120" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_parallel_gateway_join_to_validate_batch_di" bpmnElement="flow_parallel_gateway_join_to_validate_batch">
+        <di:waypoint x="650" y="115" />
+        <di:waypoint x="705" y="115" />
+        <di:waypoint x="705" y="130" />
+        <di:waypoint x="760" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validate_batch_to_end_event_no_critical_defect_di" bpmnElement="flow_validate_batch_to_end_event_no_critical_defect">
+        <di:waypoint x="860" y="130" />
+        <di:waypoint x="890" y="130" />
+        <di:waypoint x="890" y="108" />
+        <di:waypoint x="920" y="108" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="650" y="115" />
+        <di:waypoint x="705" y="115" />
+        <di:waypoint x="705" y="306" />
+        <di:waypoint x="760" y="306" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="860" y="306" />
+        <di:waypoint x="890" y="306" />
+        <di:waypoint x="890" y="108" />
+        <di:waypoint x="920" y="108" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_approval_contract"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_approval_contract">
+    <bpmn:participant id="pool_company" name="Entreprise" processRef="process_approval_contract" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_approval_contract" name="Entreprise" isExecutable="true">
+    <bpmn:startEvent id="start_approval" name="Début de l&#x27;approbation du contrat">
+      <bpmn:outgoing>flow_start_to_validate</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_validate_contract" name="Valider le contrat">
+      <bpmn:incoming>flow_start_to_validate</bpmn:incoming>
+      <bpmn:outgoing>flow_validate_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_approval_order" name="Validation dans l&#x27;ordre hiérarchique">
+      <bpmn:incoming>flow_validate_to_gateway</bpmn:incoming>
+      <bpmn:incoming>flow_validate_step_1_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_to_validate_step_1</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_to_validate_step_2</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_validate_step_1" name="Validation par le responsable 1">
+      <bpmn:incoming>flow_gateway_to_validate_step_1</bpmn:incoming>
+      <bpmn:outgoing>flow_validate_step_1_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_validate_step_2" name="Validation par le responsable 2">
+      <bpmn:incoming>flow_gateway_to_validate_step_2</bpmn:incoming>
+      <bpmn:outgoing>flow_validate_step_2_to_all_approved</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_all_approved" name="Tous les responsables ont validé">
+      <bpmn:incoming>flow_validate_step_2_to_all_approved</bpmn:incoming>
+      <bpmn:outgoing>flow_all_approved_to_sign</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_sign_contract" name="Signer le contrat">
+      <bpmn:incoming>flow_all_approved_to_sign</bpmn:incoming>
+      <bpmn:outgoing>flow_sign_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_contract_signed" name="Contrat signé">
+      <bpmn:incoming>flow_sign_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_to_validate" name="" sourceRef="start_approval" targetRef="task_validate_contract">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_validate_to_gateway" name="" sourceRef="task_validate_contract" targetRef="gateway_approval_order">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_to_validate_step_1" name="Validation par responsable 1" sourceRef="gateway_approval_order" targetRef="task_validate_step_1">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_validate_step_1_to_gateway" name="" sourceRef="task_validate_step_1" targetRef="gateway_approval_order">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_to_validate_step_2" name="Validation par responsable 2" sourceRef="gateway_approval_order" targetRef="task_validate_step_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_validate_step_2_to_all_approved" name="" sourceRef="task_validate_step_2" targetRef="gateway_all_approved">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_all_approved_to_sign" name="Tous validés" sourceRef="gateway_all_approved" targetRef="task_sign_contract">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_sign_to_end" name="" sourceRef="task_sign_contract" targetRef="end_contract_signed">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_approval_contract">
+      <bpmndi:BPMNShape id="pool_company_di" bpmnElement="pool_company" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1216" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_approval_di" bpmnElement="start_approval">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_validate_contract_di" bpmnElement="task_validate_contract">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_approval_order_di" bpmnElement="gateway_approval_order">
+        <dc:Bounds x="440" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_validate_step_1_di" bpmnElement="task_validate_step_1">
+        <dc:Bounds x="600" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_validate_step_2_di" bpmnElement="task_validate_step_2">
+        <dc:Bounds x="600" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_all_approved_di" bpmnElement="gateway_all_approved">
+        <dc:Bounds x="760" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_sign_contract_di" bpmnElement="task_sign_contract">
+        <dc:Bounds x="920" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_contract_signed_di" bpmnElement="end_contract_signed">
+        <dc:Bounds x="1080" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_validate_di" bpmnElement="flow_start_to_validate">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validate_to_gateway_di" bpmnElement="flow_validate_to_gateway">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="115" />
+        <di:waypoint x="440" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_to_validate_step_1_di" bpmnElement="flow_gateway_to_validate_step_1">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="130" />
+        <di:waypoint x="600" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="110" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validate_step_1_to_gateway_di" bpmnElement="flow_validate_step_1_to_gateway">
+        <di:waypoint x="700" y="130" />
+        <di:waypoint x="730" y="130" />
+        <di:waypoint x="730" y="190" />
+        <di:waypoint x="410" y="190" />
+        <di:waypoint x="410" y="115" />
+        <di:waypoint x="440" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_to_validate_step_2_di" bpmnElement="flow_gateway_to_validate_step_2">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="240" />
+        <di:waypoint x="600" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="220" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validate_step_2_to_all_approved_di" bpmnElement="flow_validate_step_2_to_all_approved">
+        <di:waypoint x="700" y="240" />
+        <di:waypoint x="730" y="240" />
+        <di:waypoint x="730" y="115" />
+        <di:waypoint x="760" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_all_approved_to_sign_di" bpmnElement="flow_all_approved_to_sign">
+        <di:waypoint x="810" y="115" />
+        <di:waypoint x="865" y="115" />
+        <di:waypoint x="865" y="130" />
+        <di:waypoint x="920" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="845" y="110" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_sign_to_end_di" bpmnElement="flow_sign_to_end">
+        <di:waypoint x="1020" y="130" />
+        <di:waypoint x="1050" y="130" />
+        <di:waypoint x="1050" y="108" />
+        <di:waypoint x="1080" y="108" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

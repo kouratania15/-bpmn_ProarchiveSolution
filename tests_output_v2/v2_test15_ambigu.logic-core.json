@@ -1,0 +1,142 @@
+{
+  "process": {
+    "id": "process_colis",
+    "name": "Processus de traitement des colis",
+    "documentation": "Processus de dépôt, contrôle et traitement des colis selon les critères internes du service de contrôle.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_deposant",
+      "name": "Déposant",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_service_controle",
+      "name": "Service de contrôle",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_depot",
+      "type": "startEvent",
+      "name": "Début du processus - Colis déposé",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_1",
+      "poolId": "pool_deposant",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_deposant' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_deposer_colis",
+      "type": "task",
+      "name": "Déposer un colis",
+      "poolId": "pool_deposant",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_effectuer_controle",
+      "type": "task",
+      "name": "Effectuer un contrôle",
+      "poolId": "pool_service_controle",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_service_controle' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_decision_colis",
+      "type": "exclusiveGateway",
+      "name": "Décision de traitement du colis",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "condition_1",
+      "poolId": "pool_service_controle",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_controle' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_envoyer_colis",
+      "type": "task",
+      "name": "Envoyer le colis",
+      "poolId": "pool_service_controle",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_retenir_colis",
+      "type": "task",
+      "name": "Retenir le colis",
+      "poolId": "pool_service_controle",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_event_envoye",
+      "type": "endEvent",
+      "name": "Colis envoyé",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_3",
+      "poolId": "pool_service_controle",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_controle' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_retenu",
+      "type": "endEvent",
+      "name": "Colis retenu",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_4",
+      "poolId": "pool_service_controle",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_controle' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_deposer",
+      "source": "start_event_depot",
+      "target": "task_deposer_colis",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_deposer_controle",
+      "source": "task_deposer_colis",
+      "target": "task_effectuer_controle",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_controle_decision",
+      "source": "task_effectuer_controle",
+      "target": "gateway_decision_colis",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_decision_envoyer",
+      "source": "gateway_decision_colis",
+      "target": "task_envoyer_colis",
+      "type": "sequenceFlow",
+      "name": "Envoyer",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_envoyer_fin",
+      "source": "task_envoyer_colis",
+      "target": "end_event_envoye",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "flow_decision_retenir",
+      "source": "gateway_decision_colis",
+      "target": "task_retenir_colis",
+      "type": "sequenceFlow",
+      "name": "Retenir",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_retenir_fin",
+      "source": "task_retenir_colis",
+      "target": "end_event_retenu",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_4"
+    }
+  ]
+}

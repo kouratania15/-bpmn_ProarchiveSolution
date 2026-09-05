@@ -1,0 +1,217 @@
+{
+  "process": {
+    "id": "process_inscription_formation",
+    "name": "Processus d'inscription à une formation et gestion administrative",
+    "documentation": "Processus d'inscription d'un étudiant à une formation incluant vérification d'inscription, création de dossier si nécessaire, établissement de facture et envoi au service financier."
+  },
+  "pools": [
+    {
+      "id": "pool_universite",
+      "name": "Université",
+      "lanes": [
+        {
+          "id": "lane_etudiant",
+          "name": "Étudiant"
+        },
+        {
+          "id": "lane_secretariat",
+          "name": "Secrétariat"
+        },
+        {
+          "id": "lane_comptable",
+          "name": "Comptable"
+        }
+      ]
+    },
+    {
+      "id": "pool_service_financier",
+      "name": "Service Financier"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Début de l'inscription à une formation",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_start",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant"
+    },
+    {
+      "id": "task_inscription",
+      "type": "task",
+      "name": "Étudiant s'inscrit à une formation",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_verification",
+      "type": "task",
+      "name": "Secrétariat vérifie si l'étudiant est déjà inscrit dans le système",
+      "poolId": "pool_universite",
+      "laneId": "lane_secretariat",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_dossier",
+      "type": "exclusiveGateway",
+      "name": "Étudiant déjà inscrit?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "gateway_1",
+      "poolId": "pool_universite"
+    },
+    {
+      "id": "task_creation_dossier",
+      "type": "task",
+      "name": "Créer le dossier étudiant en utilisant le formulaire d'inscription",
+      "poolId": "pool_universite",
+      "laneId": "lane_secretariat",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "data_formulaire_inscription",
+      "type": "dataObjectReference",
+      "name": "Formulaire d'inscription",
+      "isCollection": false,
+      "poolId": "pool_universite",
+      "laneId": "lane_secretariat"
+    },
+    {
+      "id": "task_etablir_facture",
+      "type": "task",
+      "name": "Établir la facture de scolarité en se basant sur le barème tarifaire",
+      "poolId": "pool_universite",
+      "laneId": "lane_comptable",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "data_bareme_tarifaire",
+      "type": "dataStoreReference",
+      "name": "Barème tarifaire",
+      "poolId": "pool_universite",
+      "laneId": "lane_comptable"
+    },
+    {
+      "id": "task_envoyer_facture",
+      "type": "sendTask",
+      "name": "Envoyer la facture au service financier",
+      "poolId": "pool_universite",
+      "laneId": "lane_comptable",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "data_facture_scolarite",
+      "type": "dataObjectReference",
+      "name": "Facture de scolarité",
+      "isCollection": false,
+      "poolId": "pool_universite",
+      "laneId": "lane_comptable"
+    },
+    {
+      "id": "end_event",
+      "type": "endEvent",
+      "name": "Fin du processus d'inscription",
+      "eventDefinition": "none",
+      "poolId": "pool_universite"
+    },
+    {
+      "id": "receive_event_facture",
+      "type": "receiveTask",
+      "name": "Reception de la facture",
+      "poolId": "pool_service_financier",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_service_financier' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_pool_service_financier",
+      "type": "endEvent",
+      "name": "Fin (rattachement automatique)",
+      "poolId": "pool_service_financier",
+      "documentation": "GAP: connexion automatique de secours — endEvent créé faute d'événement de fin exploitable ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — reçoit une transition de secours depuis 'receive_event_facture' ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_inscription",
+      "source": "start_event",
+      "target": "task_inscription",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_inscription_verification",
+      "source": "task_inscription",
+      "target": "task_verification",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_verification_gateway",
+      "source": "task_verification",
+      "target": "gateway_dossier",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_creation_dossier",
+      "source": "gateway_dossier",
+      "target": "task_creation_dossier",
+      "type": "sequenceFlow",
+      "name": "Étudiant est nouveau"
+    },
+    {
+      "id": "flow_creation_dossier_facture",
+      "source": "task_creation_dossier",
+      "target": "task_etablir_facture",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_facture",
+      "source": "gateway_dossier",
+      "target": "task_etablir_facture",
+      "type": "sequenceFlow",
+      "name": "Étudiant déjà inscrit"
+    },
+    {
+      "id": "flow_facture_envoyer",
+      "source": "task_etablir_facture",
+      "target": "task_envoyer_facture",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_envoyer_facture_end",
+      "source": "task_envoyer_facture",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "assoc_formulaire_creation_dossier",
+      "source": "data_formulaire_inscription",
+      "target": "task_creation_dossier",
+      "type": "dataInputAssociation"
+    },
+    {
+      "id": "assoc_barème_facture",
+      "source": "data_bareme_tarifaire",
+      "target": "task_etablir_facture",
+      "type": "dataInputAssociation"
+    },
+    {
+      "id": "assoc_facture_envoyer",
+      "source": "task_etablir_facture",
+      "target": "data_facture_scolarite",
+      "type": "dataOutputAssociation"
+    },
+    {
+      "id": "message_flow_facture_service_financier",
+      "source": "task_envoyer_facture",
+      "target": "receive_event_facture",
+      "type": "messageFlow",
+      "name": "Facture envoyée"
+    },
+    {
+      "id": "flow_2",
+      "source": "receive_event_facture",
+      "target": "end_pool_service_financier",
+      "type": "sequenceFlow"
+    }
+  ]
+}

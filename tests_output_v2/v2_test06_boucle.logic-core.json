@@ -1,0 +1,151 @@
+{
+  "process": {
+    "id": "process_relecture_memoire",
+    "name": "Processus de relecture et validation d'un mémoire",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_universite",
+      "name": "Université",
+      "lanes": [
+        {
+          "id": "lane_etudiant",
+          "name": "Étudiant"
+        },
+        {
+          "id": "lane_directeur",
+          "name": "Directeur de recherche"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_memoire_soumis",
+      "type": "startEvent",
+      "name": "Mémoire soumis pour relecture",
+      "eventDefinition": "none",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_etudiant_soumet_memoire",
+      "type": "task",
+      "name": "Étudiant soumet son mémoire pour relecture",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_directeur_verifie_contenu",
+      "type": "task",
+      "name": "Directeur vérifie le contenu du mémoire",
+      "poolId": "pool_universite",
+      "laneId": "lane_directeur",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_corrections_necessaires",
+      "type": "exclusiveGateway",
+      "name": "Corrections nécessaires ?",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_universite",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "task_etudiant_revise_memoire",
+      "type": "task",
+      "name": "Étudiant révise le mémoire",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_etudiant_soumet_nouveau_memoire",
+      "type": "task",
+      "name": "Étudiant soumet à nouveau le mémoire",
+      "poolId": "pool_universite",
+      "laneId": "lane_etudiant",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_directeur_valide_memoire",
+      "type": "task",
+      "name": "Directeur valide le mémoire",
+      "poolId": "pool_universite",
+      "laneId": "lane_directeur",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "end_event_memoire_valide",
+      "type": "endEvent",
+      "name": "Mémoire validé",
+      "eventDefinition": "none",
+      "poolId": "pool_universite",
+      "laneId": "lane_directeur",
+      "sourceProcessElement": "event_4"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_soumet_memoire",
+      "source": "start_event_memoire_soumis",
+      "target": "task_etudiant_soumet_memoire",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumet_verifie",
+      "source": "task_etudiant_soumet_memoire",
+      "target": "task_directeur_verifie_contenu",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_verifie_gateway",
+      "source": "task_directeur_verifie_contenu",
+      "target": "gateway_corrections_necessaires",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_corrections_necessaires_revise",
+      "source": "gateway_corrections_necessaires",
+      "target": "task_etudiant_revise_memoire",
+      "type": "sequenceFlow",
+      "name": "Oui",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_revise_soumet_nouveau",
+      "source": "task_etudiant_revise_memoire",
+      "target": "task_etudiant_soumet_nouveau_memoire",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_soumet_nouveau_verifie",
+      "source": "task_etudiant_soumet_nouveau_memoire",
+      "target": "task_directeur_verifie_contenu",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_corrections_necessaires_valide",
+      "source": "gateway_corrections_necessaires",
+      "target": "task_directeur_valide_memoire",
+      "type": "sequenceFlow",
+      "name": "Non",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_valide_memoire_end",
+      "source": "task_directeur_valide_memoire",
+      "target": "end_event_memoire_valide",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_009"
+    }
+  ]
+}

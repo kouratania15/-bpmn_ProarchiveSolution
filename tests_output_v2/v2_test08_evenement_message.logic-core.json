@@ -1,0 +1,119 @@
+{
+  "process": {
+    "id": "process_verification_virement",
+    "name": "Vérification de notification de virement",
+    "documentation": "Processus de vérification d'une notification de virement reçu depuis la banque partenaire, avec gestion des contestations en cas de désaccord sur le montant.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_entreprise",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_comptable",
+          "name": "Comptable"
+        },
+        {
+          "id": "lane_banque_partenaire",
+          "name": "Banque partenaire"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_notification_virement",
+      "type": "startEvent",
+      "name": "Notification de virement reçu",
+      "eventDefinition": "message",
+      "eventDetail": "Notification de virement reçu",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_banque_partenaire"
+    },
+    {
+      "id": "task_verifier_montant",
+      "type": "task",
+      "name": "Vérifier le montant reçu",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_comptable",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_montant_conforme",
+      "type": "exclusiveGateway",
+      "name": "Montant conforme ?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "condition_1",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_comptable"
+    },
+    {
+      "id": "task_envoyer_contestation",
+      "type": "sendTask",
+      "name": "Envoyer un message de contestation à la banque partenaire",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_comptable",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_processus_termine",
+      "type": "endEvent",
+      "name": "Processus terminé (montant conforme)",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_comptable"
+    },
+    {
+      "id": "end_contestation_envoyee",
+      "type": "endEvent",
+      "name": "Contestation envoyée (montant non conforme)",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_comptable"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_verification",
+      "source": "start_notification_virement",
+      "target": "task_verifier_montant",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_verification_gateway",
+      "source": "task_verifier_montant",
+      "target": "gateway_montant_conforme",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_montant_conforme",
+      "source": "gateway_montant_conforme",
+      "target": "end_processus_termine",
+      "type": "sequenceFlow",
+      "name": "Montant conforme",
+      "isDefault": true,
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_montant_non_conforme",
+      "source": "gateway_montant_conforme",
+      "target": "task_envoyer_contestation",
+      "type": "sequenceFlow",
+      "name": "Montant non conforme",
+      "condition": "le montant ne correspond pas à la facture",
+      "sourceProcessElement": "sequence_flows[0]"
+    },
+    {
+      "id": "flow_contestation_envoyee",
+      "source": "task_envoyer_contestation",
+      "target": "end_contestation_envoyee",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_3"
+    }
+  ]
+}

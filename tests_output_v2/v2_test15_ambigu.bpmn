@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_colis"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_deposer_controle" name="flow_deposer_controle" />
+  <bpmn:collaboration id="Collaboration_process_colis">
+    <bpmn:participant id="pool_deposant" name="Déposant" processRef="pool_deposant_process" />
+    <bpmn:participant id="pool_service_controle" name="Service de contrôle" processRef="pool_service_controle_process" />
+    <bpmn:messageFlow id="flow_deposer_controle" name="" sourceRef="task_deposer_colis" targetRef="task_effectuer_controle" messageRef="Message_flow_deposer_controle" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_deposant_process" name="Déposant" isExecutable="true">
+    <bpmn:startEvent id="start_event_depot" name="Début du processus - Colis déposé">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_deposant&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_deposer</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_deposer_colis" name="Déposer un colis">
+      <bpmn:incoming>flow_start_deposer</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_deposer" name="" sourceRef="start_event_depot" targetRef="task_deposer_colis">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_service_controle_process" name="Service de contrôle" isExecutable="true">
+    <bpmn:task id="task_effectuer_controle" name="Effectuer un contrôle">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_service_controle&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_controle_decision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_decision_colis" name="Décision de traitement du colis">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_service_controle&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_controle_decision</bpmn:incoming>
+      <bpmn:outgoing>flow_decision_envoyer</bpmn:outgoing>
+      <bpmn:outgoing>flow_decision_retenir</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_envoyer_colis" name="Envoyer le colis">
+      <bpmn:incoming>flow_decision_envoyer</bpmn:incoming>
+      <bpmn:outgoing>flow_envoyer_fin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_retenir_colis" name="Retenir le colis">
+      <bpmn:incoming>flow_decision_retenir</bpmn:incoming>
+      <bpmn:outgoing>flow_retenir_fin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_envoye" name="Colis envoyé">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_service_controle&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_envoyer_fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_event_retenu" name="Colis retenu">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_service_controle&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_retenir_fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_controle_decision" name="" sourceRef="task_effectuer_controle" targetRef="gateway_decision_colis">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_envoyer" name="Envoyer" sourceRef="gateway_decision_colis" targetRef="task_envoyer_colis">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_envoyer_fin" name="" sourceRef="task_envoyer_colis" targetRef="end_event_envoye">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_retenir" name="Retenir" sourceRef="gateway_decision_colis" targetRef="task_retenir_colis">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_retenir_fin" name="" sourceRef="task_retenir_colis" targetRef="end_event_retenu">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_colis">
+      <bpmndi:BPMNShape id="pool_deposant_di" bpmnElement="pool_deposant" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_service_controle_di" bpmnElement="pool_service_controle" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="1056" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_depot_di" bpmnElement="start_event_depot">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_deposer_colis_di" bpmnElement="task_deposer_colis">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_effectuer_controle_di" bpmnElement="task_effectuer_controle">
+        <dc:Bounds x="440" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_decision_colis_di" bpmnElement="gateway_decision_colis">
+        <dc:Bounds x="600" y="320" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_envoyer_colis_di" bpmnElement="task_envoyer_colis">
+        <dc:Bounds x="760" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_retenir_colis_di" bpmnElement="task_retenir_colis">
+        <dc:Bounds x="760" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_envoye_di" bpmnElement="end_event_envoye">
+        <dc:Bounds x="920" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_retenu_di" bpmnElement="end_event_retenu">
+        <dc:Bounds x="920" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_deposer_di" bpmnElement="flow_start_deposer">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_controle_decision_di" bpmnElement="flow_controle_decision">
+        <di:waypoint x="540" y="360" />
+        <di:waypoint x="570" y="360" />
+        <di:waypoint x="570" y="345" />
+        <di:waypoint x="600" y="345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_envoyer_di" bpmnElement="flow_decision_envoyer">
+        <di:waypoint x="650" y="345" />
+        <di:waypoint x="705" y="345" />
+        <di:waypoint x="705" y="360" />
+        <di:waypoint x="760" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="340" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_envoyer_fin_di" bpmnElement="flow_envoyer_fin">
+        <di:waypoint x="860" y="360" />
+        <di:waypoint x="890" y="360" />
+        <di:waypoint x="890" y="338" />
+        <di:waypoint x="920" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_retenir_di" bpmnElement="flow_decision_retenir">
+        <di:waypoint x="650" y="345" />
+        <di:waypoint x="705" y="345" />
+        <di:waypoint x="705" y="536" />
+        <di:waypoint x="760" y="536" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="516" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_retenir_fin_di" bpmnElement="flow_retenir_fin">
+        <di:waypoint x="860" y="536" />
+        <di:waypoint x="890" y="536" />
+        <di:waypoint x="890" y="448" />
+        <di:waypoint x="920" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_deposer_controle_di" bpmnElement="flow_deposer_controle">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="440" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

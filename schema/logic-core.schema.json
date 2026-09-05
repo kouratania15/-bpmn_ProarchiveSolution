@@ -80,10 +80,17 @@
               "subProcess",
               "dataObjectReference",
               "dataStoreReference",
+              "dataInput",
+              "dataOutput",
               "textAnnotation"
             ]
           },
           "name": { "type": "string" },
+          "isCollection": {
+            "type": "boolean",
+            "default": false,
+            "description": "Pour dataObjectReference/dataInput/dataOutput : true si la donnée représente une collection (marqueur visuel 'III')"
+          },
           "poolId": {
             "type": "string",
             "description": "ID du pool auquel appartient ce nœud"
@@ -116,14 +123,16 @@
               "terminate",
               "escalation",
               "conditional",
-              "compensation"
+              "compensation",
+              "link",
+              "cancel"
             ],
             "default": "none",
             "description": "Spécification du déclencheur d'événement BPMN"
           },
           "eventDetail": {
             "type": "string",
-            "description": "Détail de l'événement (ex: durée timer 'PT15M', code erreur 'ERR_404', nom du message)"
+            "description": "Détail de l'événement (ex: durée timer 'PT15M', code erreur 'ERR_404', nom du message, nom du lien pour eventDefinition='link')"
           },
           "documentation": { "type": "string" },
           "sourceProcessElement": { "type": "string" },
@@ -131,6 +140,31 @@
             "type": "string",
             "enum": ["diverging", "converging", "mixed", "unspecified"],
             "description": "Direction de la passerelle"
+          },
+          "loopCharacteristics": {
+            "type": "string",
+            "enum": ["none", "multiInstanceParallel", "multiInstanceSequential", "standardLoop"],
+            "default": "none",
+            "description": "Répétition d'une tâche/subProcess : multi-instance (parallèle ou séquentiel, pour chaque élément d'une collection) ou boucle standard (tant que/jusqu'à ce que). Ne jamais renseigner sans preuve textuelle explicite de répétition."
+          },
+          "loopCollection": {
+            "type": "string",
+            "description": "Pour loopCharacteristics multi-instance : id du nœud dataObjectReference/dataInput représentant la collection itérée (ex: 'la liste des articles')"
+          },
+          "triggeredByEvent": {
+            "type": "boolean",
+            "default": false,
+            "description": "Pour subProcess : true si c'est un sous-processus événementiel (déclenché par un événement de type message/error/signal/timer/escalation plutôt que par un sequenceFlow entrant normal)"
+          },
+          "isForCompensation": {
+            "type": "boolean",
+            "default": false,
+            "description": "true si cette tâche/ce subProcess est une activité de compensation (invoquée uniquement par un événement de compensation, jamais depuis le flux normal)"
+          },
+          "isTransaction": {
+            "type": "boolean",
+            "default": false,
+            "description": "Pour subProcess : true si c'est un sous-processus transactionnel (émis comme bpmn:transaction, bordure double), qui doit réussir ou échouer EN BLOC. Utilisé avec un boundaryEvent/endEvent eventDefinition='cancel' pour déclencher l'annulation groupée et les tâches isForCompensation associées."
           }
         }
       }

@@ -1,0 +1,121 @@
+{
+  "process": {
+    "id": "process_approval_contract",
+    "name": "Processus d'approbation et de signature du contrat",
+    "documentation": "Processus d'approbation hiérarchique d'un contrat par plusieurs responsables successifs, suivi de la signature."
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_approval",
+      "type": "startEvent",
+      "name": "Début de l'approbation du contrat",
+      "eventDefinition": "none",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_validate_contract",
+      "type": "task",
+      "name": "Valider le contrat",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "gateway_approval_order",
+      "type": "exclusiveGateway",
+      "name": "Validation dans l'ordre hiérarchique",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_validate_step_1",
+      "type": "task",
+      "name": "Validation par le responsable 1",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_validate_step_2",
+      "type": "task",
+      "name": "Validation par le responsable 2",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "gateway_all_approved",
+      "type": "exclusiveGateway",
+      "name": "Tous les responsables ont validé",
+      "gatewayDirection": "converging",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_sign_contract",
+      "type": "task",
+      "name": "Signer le contrat",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "end_contract_signed",
+      "type": "endEvent",
+      "name": "Contrat signé",
+      "eventDefinition": "none",
+      "poolId": "pool_company"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_validate",
+      "source": "start_approval",
+      "target": "task_validate_contract",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_validate_to_gateway",
+      "source": "task_validate_contract",
+      "target": "gateway_approval_order",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_validate_step_1",
+      "source": "gateway_approval_order",
+      "target": "task_validate_step_1",
+      "type": "sequenceFlow",
+      "name": "Validation par responsable 1"
+    },
+    {
+      "id": "flow_validate_step_1_to_gateway",
+      "source": "task_validate_step_1",
+      "target": "gateway_approval_order",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_validate_step_2",
+      "source": "gateway_approval_order",
+      "target": "task_validate_step_2",
+      "type": "sequenceFlow",
+      "name": "Validation par responsable 2"
+    },
+    {
+      "id": "flow_validate_step_2_to_all_approved",
+      "source": "task_validate_step_2",
+      "target": "gateway_all_approved",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_all_approved_to_sign",
+      "source": "gateway_all_approved",
+      "target": "task_sign_contract",
+      "type": "sequenceFlow",
+      "name": "Tous validés"
+    },
+    {
+      "id": "flow_sign_to_end",
+      "source": "task_sign_contract",
+      "target": "end_contract_signed",
+      "type": "sequenceFlow"
+    }
+  ]
+}
