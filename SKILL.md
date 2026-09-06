@@ -637,10 +637,19 @@ Un signal fiable qu'une telle confusion a eu lieu : plusieurs tâches partagent 
 ### Choix du type de sous-processus
 
 Par défaut, utiliser un **sous-processus intégré** (`subProcess`, embedded) : ses tâches internes sont modélisées dans le même diagramme, et il n'est réutilisable nulle part ailleurs. Les autres types ne sont légitimes QUE si le texte fournit une preuve explicite :
-- **Call Activity** (`callActivity`) : uniquement si le texte indique explicitement une réutilisation à plusieurs endroits, ou l'invocation d'un processus externe déjà existant.
-- **Sous-processus ad-hoc** : uniquement si le texte indique explicitement que l'ordre des tâches internes n'a pas d'importance.
+- **Call Activity** (`callActivity`) : cf. sous-section dédiée ci-dessous (RÈGLE ABSOLUE, ne jamais simuler par un échange de messages).
+- **Sous-processus ad-hoc** : cf. sous-section dédiée ci-dessous (RÈGLE ABSOLUE, ne jamais simuler par un gateway parallèle).
 - **Sous-processus transactionnel** : uniquement si le texte décrit un besoin explicite d'annulation groupée en cas d'échec partiel (cf. sous-section dédiée ci-dessous, BUG 7 confirmé).
 - **Sous-processus événementiel** (`triggeredByEvent: true`) : uniquement si le texte décrit un traitement d'exception qui peut survenir À TOUT MOMENT pendant le déroulement d'un pool/processus entier (pas d'une seule tâche — dans ce cas, utiliser un `boundaryEvent` sur cette tâche), typiquement introduit par "à tout moment pendant le processus, si...", "en cas d'erreur système à n'importe quelle étape...". Structure : un `subProcess` avec `triggeredByEvent: true`, dont le `startEvent` interne porte l'`eventDefinition` déclenchante (`error`/`message`/`signal`/`timer`/`escalation`), et qui n'a AUCUN sequenceFlow entrant depuis le processus parent (il est déclenché par l'événement, pas par le flux).
+
+**RÈGLE ABSOLUE — pool du sous-processus événementiel (BUG A confirmé) :** Quand un event subProcess est déclenché par un acteur EXTERNE (un client, un tiers) via un message start event, le sous-processus ENTIER (conteneur + TOUTES ses tâches internes) reste DANS LA MÊME POOL que le processus principal qu'il interrompt — jamais dans la pool de l'acteur externe. Cet acteur externe n'a besoin que d'UN SEUL `messageFlow`, ciblant exclusivement le `startEvent` interne du sous-processus (jamais un autre élément). Toute connexion interne après ce `startEvent` (tâches, sequenceFlow entre elles) reste un flux de séquence classique, entièrement à l'intérieur de la pool du sous-processus — ne JAMAIS assigner le `poolId` de l'acteur externe à un élément interne du sous-processus autre que ce `startEvent` message.
+
+Exemple (le cas exact confirmé — annulation de réservation hôtelière) :
+```text
+Texte: "L'hôtel traite une réservation de chambre de bout en bout. À tout moment pendant ce traitement, si le client annule sa réservation, un sous-processus dédié à l'annulation se déclenche immédiatement, interrompt le traitement en cours, rembourse le client et libère la chambre."
+INCORRECT : subProcess "Annulation" (pool Hôtel) contenant startEvent message (pool Client — FAUX), task "Rembourser" (pool Hôtel), task "Libérer la chambre" (pool Hôtel) — le sequenceFlow interne startEvent->task traverse alors deux pools, erreur fatale.
+CORRECT   : subProcess "Annulation" (pool Hôtel) contenant startEvent message (pool Hôtel — hérite du conteneur), task "Rembourser" (pool Hôtel), task "Libérer la chambre" (pool Hôtel) — seul un messageFlow pool Client -> startEvent interne relie les deux pools.
+```
 Sans preuve textuelle explicite pour l'un de ces quatre cas, rester sur le sous-processus intégré par défaut.
 
 ### Sous-processus transactionnel (annulation groupée — BUG 7 confirmé)
@@ -676,6 +685,50 @@ Texte: "La vente immobilière comprend la signature de l'acte puis le transfert 
 }
 ```
 Ne jamais oublier le `cancelEndEvent`/`boundaryEvent` cancel : un `subProcess` avec `isTransaction: true` mais sans aucun élément `cancel` ne modélise aucune annulation réelle, juste une bordure double sans effet.
+
+### Sous-processus ad-hoc (liberté d'ordre — RÈGLE ABSOLUE)
+
+Déclencheurs textuels : "dans n'importe quel ordre", "selon les disponibilités", "sans ordre imposé", "librement", "peuvent être réalisées dans l'ordre souhaité", "in any order", "regardless of sequence".
+
+**DISTINCTION CRITIQUE avec le `parallelGateway` (erreur la plus fréquente à éviter) :** un `parallelGateway` impose une SIMULTANÉITÉ STRICTE (toutes les branches démarrent ensemble) ET une CONVERGENCE OBLIGATOIRE (le flux ne continue qu'une fois TOUTES les branches terminées) — c'est la sémantique d'exécution d'un moteur BPMN réel pour "en même temps"/"simultanément" EXPLICITEMENT énoncé dans le texte. Une liberté d'ordre ("n'importe quel ordre") est une notion complètement différente : elle n'impose NI simultanéité NI convergence obligatoire, elle autorise un ordre séquentiel variable, voire une exécution partielle. Ne jamais utiliser `parallelGateway` pour représenter une liberté d'ordre — c'est une erreur de sémantique métier, pas une question de style : le comportement du processus déployé serait différent.
+
+Structure : un unique `subProcess` avec un marqueur ad-hoc (utiliser `documentation: "adHoc: true"` sur le nœud, faute de champ dédié dans le schéma), contenant les tâches concernées comme enfants (`parentSubProcessId`). Ces tâches enfants ne sont reliées entre elles par AUCUN `sequenceFlow` imposant un ordre — elles restent des enfants indépendants du même conteneur, chacune atteignable et se terminant indépendamment des autres.
+
+Exemple 1 (le cas exact confirmé — lancement marketing) :
+```text
+Texte: "Les tâches suivantes peuvent être réalisées dans n'importe quel ordre, selon les disponibilités de chacun : rédiger le communiqué de presse, concevoir les visuels publicitaires, contacter les influenceurs, et préparer la page de vente en ligne."
+INCORRECT : parallelGateway (split) -> [4 tâches] -> parallelGateway (join) — impose une simultanéité stricte et une convergence obligatoire, absentes du texte.
+CORRECT   : subProcess "Préparatifs de campagne" (documentation: "adHoc: true") contenant 4 tâches enfants (rédiger le communiqué, concevoir les visuels, contacter les influenceurs, préparer la page de vente), sans sequenceFlow entre elles.
+```
+
+Exemple 2 (domaine différent — organisation d'un événement) :
+```text
+Texte: "L'équipe peut réserver la salle, envoyer les invitations et commander le traiteur sans ordre particulier, selon les disponibilités de chacun."
+INCORRECT : parallelGateway (split) -> [3 tâches] -> parallelGateway (join).
+CORRECT   : subProcess "Organisation logistique" (documentation: "adHoc: true") contenant 3 tâches enfants (réserver la salle, envoyer les invitations, commander le traiteur), sans sequenceFlow entre elles.
+```
+
+### Call Activity (processus réutilisable — RÈGLE ABSOLUE)
+
+Déclencheurs textuels : "appelle le processus standard/commun", "utilise le processus partagé", "invoque le processus", "également utilisé par [d'autres services/d'autres types de demandes]", "processus réutilisable".
+
+**DISTINCTION CRITIQUE avec l'échange de messages inter-pools (erreur la plus fréquente à éviter) :** un appel à un processus standard/partagé N'EST PAS une communication entre deux organisations distinctes — c'est un élément d'EXÉCUTION SYNCHRONE au sein du MÊME flux de séquence, exactement comme un sous-processus intégré, sauf que son contenu est défini et versionné séparément. Ne jamais créer de pool séparée pour le processus appelé, et ne jamais modéliser l'appel par un aller-retour de `messageFlow` (demande → réponse) entre deux pools : cela ne produit aucune référence à un processus réutilisable, qui est précisément ce que le texte demande de représenter — c'est une erreur de sémantique métier, pas une question de style.
+
+Structure : un UNIQUE nœud `callActivity`, intégré directement dans le flux de séquence du pool appelant (`sequenceFlow` entrant et sortant classiques, comme n'importe quelle tâche), avec `documentation` portant la référence au processus appelé (ex: `"calledElement: Validation hiérarchique standard"`, faute de champ dédié dans le schéma). Aucun détail interne du processus appelé n'est modélisé (il est externe et versionné séparément par définition) ; aucune pool séparée ; aucun messageFlow.
+
+Exemple 1 (le cas exact confirmé — validation RH) :
+```text
+Texte: "Le système appelle le processus standard de validation hiérarchique, utilisé également par le service informatique et le service commercial pour d'autres types de demandes internes."
+INCORRECT : pool "Système" séparée, contenant une tâche "Appeler le processus de validation", reliée à la pool RH par un aller-retour de messageFlow (demande de validation / réponse de validation).
+CORRECT   : callActivity "Validation hiérarchique standard" (documentation: "calledElement: Validation hiérarchique standard"), directement dans le flux de séquence de la pool RH, entre la réception de la demande de congé et la confirmation au demandeur.
+```
+
+Exemple 2 (domaine différent — service après-vente) :
+```text
+Texte: "Le service client déclenche le processus commun de remboursement, également utilisé par le service comptabilité pour les avoirs fournisseurs."
+INCORRECT : pool "Comptabilité" séparée reliée par messageFlow au service client pour simuler l'appel.
+CORRECT   : callActivity "Processus de remboursement" (documentation: "calledElement: Processus de remboursement"), directement dans le flux de séquence de la pool Service Client.
+```
 
 ### Structure interne obligatoire
 
@@ -865,6 +918,26 @@ Logic-Core :
     { "source": "timer_24h", "target": "task_cancel", "type": "sequenceFlow" }
   ]
 }
+```
+
+## 10.7 Gateways et frontières de pool (RÈGLE ABSOLUE, tout type de gateway)
+
+Un gateway (`exclusiveGateway`, `inclusiveGateway`, `parallelGateway`, `complexGateway`, `eventBasedGateway`) ne peut JAMAIS avoir de flux sortant ou entrant reliant directement un élément d'une AUTRE pool — ni par `sequenceFlow` (interdit structurellement entre pools), ni par `messageFlow` (un gateway n'est pas un point de communication BPMN valide). Cette règle s'applique à TOUS les gateways, sans exception, même quand une seule branche parmi plusieurs est concernée.
+
+Si une branche d'un gateway doit déclencher une réaction dans une autre pool (notification, annulation, compensation), insérer SYSTÉMATIQUEMENT une tâche intermédiaire dans LA MÊME POOL que le gateway, entre le gateway et la frontière de pool — c'est cette tâche qui porte le `messageFlow` sortant (ou entrant), jamais le gateway directement. Le gateway lui-même ne garde que des `sequenceFlow` classiques vers/depuis des éléments de sa propre pool.
+
+Exemple (le cas exact confirmé — vente immobilière avec annulation transactionnelle) :
+```text
+Texte: "Si le transfert des fonds échoue après que l'acte a déjà été signé, toutes les étapes précédentes, y compris la signature de l'acte, doivent être annulées."
+INCORRECT : gateway "Transfert réussi ?" (pool Banque) -[Échec]-> task "Annuler la signature" (pool Notaire) — sequenceFlow direct entre deux pools, portée par le gateway lui-même.
+CORRECT   : gateway "Transfert réussi ?" (pool Banque) -[Échec]-> task "Notifier l'échec du transfert" (pool Banque, MÊME pool que le gateway) -[messageFlow]-> task "Annuler la signature" (pool Notaire).
+```
+
+Exemple (domaine différent — recrutement, décision de jury) :
+```text
+Texte: "Si le comité de recrutement rejette la candidature, le service RH en informe le candidat externe."
+INCORRECT : gateway "Décision du comité" (pool Entreprise) -[Rejetée]-> task "Informer le candidat" (pool Candidat externe) — sequenceFlow direct depuis le gateway.
+CORRECT   : gateway "Décision du comité" (pool Entreprise) -[Rejetée]-> task "Notifier le rejet" (pool Entreprise, même pool que le gateway) -[messageFlow]-> pool Candidat externe.
 ```
 
 ---
@@ -1387,7 +1460,7 @@ produire :
 A → C → B
 ```
 
-Conserver les IDs de A et B.
+Conserver les IDs de A et B — ET conserver l'ID du `sequenceFlow` A→B existant pour le premier segment résultant A→C (réutiliser cet ID tel quel, ne jamais le renommer), en ne créant un nouvel ID que pour le second segment C→B. Un ID d'edge est un ID persistant comme un ID de nœud : le renommer alors que l'edge continue d'exister sous une forme équivalente (juste redirigée vers C au lieu de B) est une suppression d'ID interdite au même titre qu'un nœud supprimé.
 
 ## Ajout d'une alternative
 
@@ -1407,7 +1480,7 @@ XOR
 └── C
 ```
 
-sans modifier les IDs existants.
+sans modifier les IDs existants — y compris l'ID du `sequenceFlow` A→B d'origine : réutiliser cet ID tel quel pour l'edge XOR→B (seule sa `source` change, de A à XOR), et créer un nouvel ID uniquement pour le nouvel edge XOR→C et pour le nouvel edge A→XOR. Un ID d'edge existant qui disparaît alors que ce flux continue d'exister sous une forme équivalente (juste réacheminé) est une suppression d'ID interdite, au même titre qu'un nœud supprimé — exactement comme pour l'Insertion ci-dessus.
 
 ## Suppression
 

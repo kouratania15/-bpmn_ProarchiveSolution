@@ -77,6 +77,51 @@ ARTIFACT_TYPES = {
 VALID_ID_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 
+_EVENT_DEF_INFERENCE_KEYWORDS: list[tuple[str, list[str]]] = [
+    ("timer", ["wait", "hour", "heure", "délai", "delai", "timeout", "jour", "minute", "day"]),
+    ("message", ["message", "notification", "réponse", "reponse", "reçoit", "recoit", "email", "courriel"]),
+    ("signal", ["signal", "alerte", "diffuse"]),
+    ("error", ["erreur", "error", "panne", "échec technique", "echec technique"]),
+]
+
+
+def _ensure_catch_and_boundary_event_definition(nodes: list[dict[str, Any]]) -> None:
+    """Un intermediateCatchEvent/intermediateThrowEvent/boundaryEvent SANS
+    eventDefinition valide (absent ou 'none') est TOUJOURS une erreur fatale en
+    BPMN 2.0 — un événement de capture doit obligatoirement porter un
+    déclencheur, ce n'est pas affaire de style. Observé en pratique : le
+    self-healing peut échouer à corriger ce défaut sur plusieurs tentatives
+    consécutives (il régénère un nœud sans rapport plutôt que de fixer le nœud
+    fautif, cf. section 19.1 de SKILL.md), faisant échouer tout le pipeline
+    après épuisement des tentatives au lieu d'une simple inférence locale.
+    Réparé mécaniquement par inférence prudente à partir du nom (mots-clés
+    fiables uniquement), avec 'conditional' comme repli générique sûr — un
+    événement de capture sans déclencheur nommément identifiable représente le
+    plus souvent une attente d'un état/condition (cf. section 8.1 de
+    SKILL.md). Toujours annoté GAP : une inférence automatique n'est jamais
+    silencieuse, elle doit rester vérifiable contre le texte source."""
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        if node.get("type") not in ("intermediateCatchEvent", "intermediateThrowEvent", "boundaryEvent"):
+            continue
+        edef = node.get("eventDefinition")
+        if edef and edef != "none":
+            continue
+        name_lower = (node.get("name") or "").lower()
+        inferred = "conditional"
+        for candidate, keywords in _EVENT_DEF_INFERENCE_KEYWORDS:
+            if any(kw in name_lower for kw in keywords):
+                inferred = candidate
+                break
+        node["eventDefinition"] = inferred
+        _mark_auto_gap(
+            node,
+            f"eventDefinition manquant, inféré automatiquement comme '{inferred}' à partir du nom du nœud — "
+            "à vérifier contre le texte source (cf. section 8.1 de SKILL.md).",
+        )
+
+
 def _sanitize_id(raw_id: str, existing_ids: set[str]) -> str:
     """Translittère un ID en ASCII strict conforme au schema (ex: accents FR),
     sans dépendre du LLM pour deviner la contrainte — il régénère sinon le
@@ -93,12 +138,106 @@ def _sanitize_id(raw_id: str, existing_ids: set[str]) -> str:
     return candidate
 
 
+PROCESS_DESCRIPTION_ID_PATTERN = re.compile(r"^[a-z_][a-z0-9_]*$")
+
+
+def _sanitize_process_description_id(raw_id: str, existing_ids: set[str]) -> str:
+    """Équivalent de _sanitize_id pour le Process Description, dont le schema
+    impose des IDs strictement minuscules (^[a-z_][a-z0-9_]*$, pas de tiret,
+    pas de majuscule). Un accent recopié depuis un nom métier en français
+    (ex: 'expédition_commande') fait échouer la validation JSON-Schema ; sans
+    cette passe mécanique, seule la correction LLM (heal_process_description)
+    peut le réparer, et elle peut échouer plusieurs tentatives de suite sur le
+    même accent (observé en usage réel)."""
+    ascii_id = unicodedata.normalize("NFKD", raw_id).encode("ascii", "ignore").decode("ascii").lower()
+    ascii_id = re.sub(r"[^a-z0-9_]", "_", ascii_id).strip("_")
+    if not ascii_id or not (ascii_id[0].isalpha() or ascii_id[0] == "_"):
+        ascii_id = "n_" + ascii_id if ascii_id else "n"
+    candidate = ascii_id
+    suffix = 2
+    while candidate in existing_ids:
+        candidate = f"{ascii_id}_{suffix}"
+        suffix += 1
+    return candidate
+
+
+def _sanitize_process_description_ids(process_desc: dict[str, Any]) -> None:
+    """Assainit en place tout ID d'identified_elements non conforme au pattern
+    du schema, et propage le renommage à toutes les références croisées
+    connues (actor_id, source/target de relations et sequence_flows, outcome
+    de branches de condition, related_element de gap)."""
+    if not isinstance(process_desc, dict):
+        return
+    elements = process_desc.get("identified_elements")
+    if not isinstance(elements, dict):
+        return
+
+    id_bearing_keys = ("participants", "activities", "events", "conditions", "gateways", "relations")
+    existing_ids: set[str] = set()
+    for key in id_bearing_keys:
+        for item in elements.get(key) or []:
+            if isinstance(item, dict) and isinstance(item.get("id"), str):
+                existing_ids.add(item["id"])
+
+    rename_map: dict[str, str] = {}
+    for key in id_bearing_keys:
+        for item in elements.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            iid = item.get("id")
+            if isinstance(iid, str) and not PROCESS_DESCRIPTION_ID_PATTERN.match(iid):
+                new_id = _sanitize_process_description_id(iid, existing_ids)
+                existing_ids.discard(iid)
+                existing_ids.add(new_id)
+                rename_map[iid] = new_id
+                item["id"] = new_id
+
+    if not rename_map:
+        return
+
+    for item in elements.get("activities") or []:
+        if isinstance(item, dict) and item.get("actor_id") in rename_map:
+            item["actor_id"] = rename_map[item["actor_id"]]
+    for key in ("relations", "sequence_flows"):
+        for item in elements.get(key) or []:
+            if not isinstance(item, dict):
+                continue
+            for side in ("source", "target"):
+                if item.get(side) in rename_map:
+                    item[side] = rename_map[item[side]]
+    for item in elements.get("conditions") or []:
+        if not isinstance(item, dict):
+            continue
+        for branch in item.get("branches") or []:
+            if isinstance(branch, dict) and branch.get("outcome") in rename_map:
+                branch["outcome"] = rename_map[branch["outcome"]]
+
+    for gap in process_desc.get("gaps") or []:
+        if isinstance(gap, dict) and gap.get("related_element") in rename_map:
+            gap["related_element"] = rename_map[gap["related_element"]]
+
+
 # ---------------------------------------------------------------------------
 # Helpers de connectivité (utilisés par la passe de rattachement automatique)
 # ---------------------------------------------------------------------------
 
-def _bfs_reachable(start_ids: list[str], seq_edges: list[dict[str, Any]]) -> set[str]:
-    """Retourne l'ensemble des ids atteignables par sequenceFlow depuis start_ids."""
+def _bfs_reachable(
+    start_ids: list[str],
+    seq_edges: list[dict[str, Any]],
+    boundary_map: dict[str, list[str]] | None = None,
+) -> set[str]:
+    """Retourne l'ensemble des ids atteignables par sequenceFlow depuis start_ids.
+
+    `boundary_map` (host_id -> [boundaryEvent ids attachés]) permet de traiter un
+    boundaryEvent comme atteint dès que son hôte l'est — un boundaryEvent n'a
+    JAMAIS de sequenceFlow entrant (cf. section 15.2 de SKILL.md), sa sémantique
+    BPMN de déclenchement passe par attachedToRef, pas par une arête. Sans ce
+    traitement, un nœud qui n'est atteignable QUE via un boundaryEvent (ex: un
+    gateway inséré juste après par _ensure_gateway_after_residual_multi_out) est
+    vu à tort comme une composante déconnectée par cette BFS, ce qui déclenche un
+    rattachement de secours erroné — potentiellement une arête bouclant vers
+    l'hôte du boundaryEvent lui-même (cf. régression confirmée sur un scénario
+    d'escalade timer, rapport de suivi post rapport_tests_v2.md)."""
     adj: dict[str, list[str]] = {}
     for e in seq_edges:
         s, t = e.get("source"), e.get("target")
@@ -114,6 +253,10 @@ def _bfs_reachable(start_ids: list[str], seq_edges: list[dict[str, Any]]) -> set
         for nxt in adj.get(cur, []):
             if nxt not in visited:
                 stack.append(nxt)
+        if boundary_map:
+            for b_id in boundary_map.get(cur, []):
+                if b_id not in visited:
+                    stack.append(b_id)
     return visited
 
 
@@ -546,6 +689,104 @@ def _check_message_events_and_flows(logic_core: dict[str, Any]) -> list[str]:
                     "un sequenceFlow direct entre le gateway et la tâche suivante (cf. section 3 de SKILL.md)."
                 )
     return errors
+
+
+def _split_cross_gateway_merged_node(
+    nodes: list[dict[str, Any]],
+    node_map: dict[str, dict[str, Any]],
+    edges: list[dict[str, Any]],
+    seq_edges: list[dict[str, Any]],
+) -> None:
+    """Répare mécaniquement le pattern détecté par _check_cross_gateway_task_merge :
+    un nœud non-gateway atteint depuis 2+ gateways distincts et non liés (pas les
+    branches sœurs d'un même gateway) est presque toujours la fusion erronée de
+    deux mentions textuelles distinctes (cf. section 2 de SKILL.md). Rendu
+    structurellement impossible plutôt que seulement détecté après coup — même
+    principe que _split_erroneously_merged_tasks (BUG 2), étendu ici au cas où
+    la fusion illégitime survient par CONVERGENCE depuis des gateways différents
+    plutôt que par un fan-out direct (régression confirmée : ce câblage peut être
+    introduit PAR une étape de self-healing elle-même)."""
+    incoming_by_target: dict[str, list[dict[str, Any]]] = {}
+    outgoing_by_source: dict[str, list[dict[str, Any]]] = {}
+    for e in seq_edges:
+        s, t = e.get("source"), e.get("target")
+        if isinstance(t, str):
+            incoming_by_target.setdefault(t, []).append(e)
+        if isinstance(s, str):
+            outgoing_by_source.setdefault(s, []).append(e)
+
+    def _nearest_ancestor_gateway(start_id: str) -> str | None:
+        visited: set[str] = set()
+        stack = [start_id]
+        while stack:
+            cur = stack.pop()
+            if cur in visited:
+                continue
+            visited.add(cur)
+            cur_node = node_map.get(cur, {})
+            if cur_node.get("type") in GATEWAY_TYPES:
+                return cur
+            for e in incoming_by_target.get(cur, []):
+                src = e.get("source")
+                if isinstance(src, str):
+                    stack.append(src)
+        return None
+
+    for node in list(nodes):
+        if not isinstance(node, dict):
+            continue
+        nid = node.get("id")
+        if not isinstance(nid, str) or node.get("type") in GATEWAY_TYPES or node.get("type") in ("endEvent", "startEvent", "boundaryEvent"):
+            continue
+        ins = incoming_by_target.get(nid, [])
+        if len(ins) < 2:
+            continue
+
+        gateway_groups: dict[str, list[dict[str, Any]]] = {}
+        none_group: list[dict[str, Any]] = []
+        for e in ins:
+            src = e.get("source")
+            anc = _nearest_ancestor_gateway(src) if isinstance(src, str) else None
+            if anc is None:
+                none_group.append(e)
+            else:
+                gateway_groups.setdefault(anc, []).append(e)
+
+        # Même condition de déclenchement EXACTE que _check_cross_gateway_task_merge :
+        # au moins 2 gateways ancêtres distincts (les prédécesseurs sans gateway
+        # ancêtre ne comptent pas dans le seuil, cf. check d'origine).
+        if len(gateway_groups) < 2:
+            continue
+
+        sorted_gw_ids = sorted(gateway_groups.keys())
+        outs_template = outgoing_by_source.get(nid, [])
+
+        for i, gw_id in enumerate(sorted_gw_ids):
+            if i == 0:
+                continue  # le premier groupe (+ les prédécesseurs sans gateway ancêtre) reste sur le nœud d'origine
+            group_edges = gateway_groups[gw_id]
+            new_id = f"{nid}_2"
+            suffix = 3
+            while new_id in node_map:
+                new_id = f"{nid}_{suffix}"
+                suffix += 1
+            new_node = {**node, "id": new_id}
+            node_map[new_id] = new_node
+            nodes.append(new_node)
+            for e in group_edges:
+                e["target"] = new_id
+            for out_e in outs_template:
+                clone_out = dict(out_e)
+                clone_out["id"] = f"{out_e.get('id')}_{new_id}"
+                clone_out["source"] = new_id
+                edges.append(clone_out)
+                seq_edges.append(clone_out)
+            _mark_auto_gap(
+                new_node,
+                f"nœud dédoublé automatiquement : atteint depuis le gateway '{gw_id}', non lié au gateway "
+                f"d'origine de '{nid}' — fusion erronée probable de deux mentions textuelles distinctes "
+                "(cf. section 2 de SKILL.md).",
+            )
 
 
 def _check_cross_gateway_task_merge(logic_core: dict[str, Any]) -> list[str]:
@@ -1063,6 +1304,200 @@ def _split_erroneously_merged_tasks(
             outs[i]["source"] = new_id
 
 
+_RETRY_TEXT_KEYWORDS_RE = re.compile(
+    r"\b(retry|retries|réessai\w*|nouvelle tentative|recommence\w*|à nouveau la même tâche)\b",
+    re.I,
+)
+
+
+def _ensure_subprocess_children_share_pool(nodes: list[dict[str, Any]], node_map: dict[str, dict[str, Any]]) -> None:
+    """Tout enfant d'un subProcess (parentSubProcessId) DOIT appartenir à la
+    MÊME pool que son conteneur — un subProcess est une boîte noire unique du
+    point de vue des pools (cf. section 9.1 de SKILL.md), il ne peut jamais
+    avoir des enfants répartis dans des pools différentes. Régression
+    confirmée : le start event interne d'un sous-processus événementiel
+    déclenché par un acteur externe hérite parfois à tort le poolId de cet
+    acteur EXTERNE (celui qui déclenche l'événement) au lieu du poolId de son
+    propre conteneur — produisant un sequenceFlow interne qui traverse deux
+    pools, une erreur fatale (POOL-001) que le self-healing ne corrige pas de
+    façon fiable malgré plusieurs tentatives."""
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        parent_id = node.get("parentSubProcessId")
+        if not isinstance(parent_id, str):
+            continue
+        parent_node = node_map.get(parent_id)
+        if not isinstance(parent_node, dict):
+            continue
+        parent_pool = parent_node.get("poolId")
+        if isinstance(parent_pool, str) and node.get("poolId") != parent_pool:
+            _mark_auto_gap(
+                node,
+                f"poolId corrigé automatiquement en '{parent_pool}' pour correspondre à son subProcess "
+                f"conteneur '{parent_id}' : un enfant de subProcess ne peut jamais appartenir à une pool "
+                "différente de son conteneur (cf. section 9.1 de SKILL.md).",
+            )
+            node["poolId"] = parent_pool
+
+
+def _fix_gateway_pool_crossing_edges(
+    nodes: list[dict[str, Any]],
+    node_map: dict[str, dict[str, Any]],
+    edges: list[dict[str, Any]],
+    seq_edges: list[dict[str, Any]],
+    pools: list[dict[str, Any]],
+) -> None:
+    """Un gateway ne peut JAMAIS être un point de communication inter-pools (ni
+    source ni cible d'un messageFlow, ni relié directement par un sequenceFlow
+    à un nœud d'une autre pool) — cf. section 10.7 de SKILL.md. Deux régressions
+    confirmées (sous-processus événementiel + sous-processus transactionnel,
+    suivi de rapport_tests_v2.md) montrent que le rappel dans le prompt de
+    self-healing (llm_agent.py) n'est PAS appliqué de façon fiable : le
+    self-healing épuise ses tentatives sans converger, malgré une explication
+    textuelle correcte du correctif attendu. Rendu structurellement impossible
+    ici, sur le même principe que le fix mécanique du BUG 2 : insertion
+    automatique d'une tâche intermédiaire dans la pool du gateway, qui porte
+    seule le messageFlow vers/depuis l'autre pool — le gateway ne garde qu'un
+    sequenceFlow classique vers/depuis cette tâche, dans sa propre pool."""
+    pool_name_by_id = {p.get("id"): p.get("name", p.get("id")) for p in pools if isinstance(p, dict) and isinstance(p.get("id"), str)}
+
+    def _unique_task_id(base: str) -> str:
+        candidate = f"{base}_notify"
+        suffix = 2
+        while candidate in node_map:
+            candidate = f"{base}_notify_{suffix}"
+            suffix += 1
+        return candidate
+
+    for e in list(seq_edges):
+        if not isinstance(e, dict) or e.get("type") not in ("sequenceFlow", None):
+            continue
+        src, tgt = e.get("source"), e.get("target")
+        src_node = node_map.get(src)
+        tgt_node = node_map.get(tgt)
+        if not isinstance(src_node, dict) or not isinstance(tgt_node, dict):
+            continue
+        src_pool = src_node.get("poolId")
+        tgt_pool = tgt_node.get("poolId")
+        if not (isinstance(src_pool, str) and isinstance(tgt_pool, str) and src_pool != tgt_pool):
+            continue
+
+        src_is_gw = src_node.get("type") in GATEWAY_TYPES
+        tgt_is_gw = tgt_node.get("type") in GATEWAY_TYPES
+        if src_is_gw == tgt_is_gw:
+            # Ni l'un ni l'autre (cas géré ailleurs par l'auto-conversion en
+            # messageFlow), ou les deux à la fois (cas dégénéré trop rare et
+            # ambigu pour une réparation mécanique fiable) : laisser tel quel.
+            continue
+
+        if src_is_gw:
+            # Direction A : le gateway est la SOURCE -> insérer la tâche relais
+            # dans la pool du gateway, elle seule porte le messageFlow sortant.
+            new_id = _unique_task_id(src)
+            label = e.get("name") or e.get("condition")
+            task_name = f"Transmettre : {label}" if label else f"Notifier {pool_name_by_id.get(tgt_pool, tgt_pool)}"
+            new_task: dict[str, Any] = {"id": new_id, "type": "task", "name": task_name, "poolId": src_pool}
+            node_map[new_id] = new_task
+            nodes.append(new_task)
+            e["target"] = new_id  # reste un sequenceFlow, maintenant entièrement dans la pool du gateway
+            msg_edge = {"id": f"{e.get('id')}_msg", "source": new_id, "target": tgt, "type": "messageFlow"}
+            edges.append(msg_edge)
+            _mark_auto_gap(
+                new_task,
+                f"tâche relais insérée automatiquement entre le gateway '{src}' et la pool '{tgt_pool}' : un "
+                "gateway ne peut jamais porter directement un messageFlow inter-pool (cf. section 10.7 de "
+                "SKILL.md).",
+            )
+        else:
+            # Direction B : le gateway est la CIBLE -> insérer la tâche relais
+            # dans la pool du gateway, elle seule reçoit le messageFlow entrant.
+            new_id = _unique_task_id(tgt)
+            new_task = {
+                "id": new_id, "type": "task",
+                "name": f"Recevoir déclenchement de {pool_name_by_id.get(src_pool, src_pool)}",
+                "poolId": tgt_pool,
+            }
+            node_map[new_id] = new_task
+            nodes.append(new_task)
+            e["target"] = new_id
+            e["type"] = "messageFlow"
+            if e in seq_edges:
+                seq_edges.remove(e)
+            new_seq_edge = {"id": f"{e.get('id')}_seq", "source": new_id, "target": tgt, "type": "sequenceFlow"}
+            edges.append(new_seq_edge)
+            seq_edges.append(new_seq_edge)
+            _mark_auto_gap(
+                new_task,
+                f"tâche relais insérée automatiquement entre la pool '{src_pool}' et le gateway '{tgt}' : un "
+                "gateway ne peut jamais recevoir directement un messageFlow inter-pool (cf. section 10.7 de "
+                "SKILL.md).",
+            )
+
+
+def _remove_boundary_event_reboop_to_own_host(
+    edges: list[dict[str, Any]],
+    seq_edges: list[dict[str, Any]],
+    node_map: dict[str, dict[str, Any]],
+    source_text: str | None,
+) -> None:
+    """Un boundaryEvent attaché à une tâche T ne doit JAMAIS voir sa branche
+    reboucler vers T elle-même — directement (le boundaryEvent lui-même ciblant
+    T) OU indirectement, à N sauts, via une tâche de sa propre branche (ex:
+    timer -> escalade -> prise en charge -> [reboop] -> T). Un boundary event
+    ouvre une branche latérale INDÉPENDANTE (ex: escalade en parallèle), il ne
+    redémarre jamais l'activité à laquelle il est attaché — le cas indirect a
+    été observé en pratique (le self-healing route l'edge de reboop un ou
+    plusieurs sauts plus loin dans la branche plutôt que sur l'edge immédiate
+    du boundaryEvent, ce qui échappait à une détection limitée au premier saut).
+    On retire ICI uniquement l'arête qui CIBLE T (pas toute la branche), à
+    n'importe quelle profondeur dans le sous-graphe atteignable depuis la sortie
+    du boundaryEvent — sauf si le texte source décrit explicitement une nouvelle
+    tentative ('retry', 'réessaie', 'nouvelle tentative'), cf. section 8.1 de
+    SKILL.md."""
+    if source_text and _RETRY_TEXT_KEYWORDS_RE.search(source_text):
+        return
+
+    outgoing_by_source: dict[str, list[dict[str, Any]]] = {}
+    for e in seq_edges:
+        s = e.get("source")
+        if isinstance(s, str):
+            outgoing_by_source.setdefault(s, []).append(e)
+
+    for node in list(node_map.values()):
+        if not isinstance(node, dict) or node.get("type") != "boundaryEvent":
+            continue
+        host = node.get("attachedToRef")
+        bid = node.get("id")
+        if not isinstance(host, str) or not isinstance(bid, str):
+            continue
+
+        visited: set[str] = set()
+        stack = [bid]
+        while stack:
+            cur = stack.pop()
+            if cur in visited:
+                continue
+            visited.add(cur)
+            for e in list(outgoing_by_source.get(cur, [])):
+                if e.get("target") == host:
+                    if e in edges:
+                        edges.remove(e)
+                    if e in seq_edges:
+                        seq_edges.remove(e)
+                    outgoing_by_source[cur] = [x for x in outgoing_by_source.get(cur, []) if x is not e]
+                    _mark_auto_gap(
+                        node,
+                        f"flux erroné vers son propre hôte ('{host}') retiré automatiquement depuis '{cur}' : "
+                        "un boundaryEvent (et toute sa branche) n'a jamais vocation à redémarrer l'activité à "
+                        "laquelle il est attaché (cf. section 8.1 de SKILL.md).",
+                    )
+                    continue
+                nxt = e.get("target")
+                if isinstance(nxt, str) and nxt not in visited:
+                    stack.append(nxt)
+
+
 def _ensure_gateway_after_residual_multi_out(
     nodes: list[dict[str, Any]],
     node_map: dict[str, dict[str, Any]],
@@ -1430,6 +1865,12 @@ def _ensure_full_connectivity(
         for e in (message_edges or [])
         if isinstance(e, dict) and isinstance(e.get("target"), str)
     }
+    # Un boundaryEvent n'a jamais de sequenceFlow entrant : il est "atteint" via
+    # attachedToRef dès que son hôte l'est (cf. docstring de _bfs_reachable).
+    boundary_map: dict[str, list[str]] = {}
+    for n in nodes:
+        if isinstance(n, dict) and n.get("type") == "boundaryEvent" and isinstance(n.get("attachedToRef"), str) and isinstance(n.get("id"), str):
+            boundary_map.setdefault(n["attachedToRef"], []).append(n["id"])
     # Un startEvent/endEvent interne à un subProcess (parentSubProcessId défini)
     # n'est pas un point d'entrée/sortie du PROCESSUS PARENT : l'inclure fausserait
     # le calcul d'accessibilité du flux principal (cf. section 9.1 de SKILL.md).
@@ -1453,6 +1894,14 @@ def _ensure_full_connectivity(
         if n.get("type") not in non_connectable
         and n["id"] not in subprocess_child_ids
         and not n.get("isForCompensation")
+        # Un subProcess événementiel (triggeredByEvent=true) n'a JAMAIS de
+        # sequenceFlow entrant par conception : il est déclenché par son propre
+        # startEvent interne (message/error/signal/timer), pas par le flux du
+        # processus parent (cf. section 9.1 de SKILL.md). Sans cette exclusion,
+        # cette passe le force-rattache à tort au dernier nœud "atteignable"
+        # trouvé, créant un sequenceFlow qui n'a aucun sens métier (régression
+        # confirmée sur un scénario de sous-processus d'annulation).
+        and not (n.get("type") == "subProcess" and n.get("triggeredByEvent"))
     ]
 
     if not start_ids:
@@ -1461,7 +1910,7 @@ def _ensure_full_connectivity(
         return
 
     # --- 1. Rattachement de TOUTES les composantes inatteignables depuis un start ---
-    reachable = _bfs_reachable(start_ids, seq_edges)
+    reachable = _bfs_reachable(start_ids, seq_edges, boundary_map)
     unreached = [nid for nid in business_ids if nid not in reachable]
 
     if unreached:
@@ -1515,7 +1964,7 @@ def _ensure_full_connectivity(
                     node_map[root],
                     f"rattaché automatiquement au flux principal depuis '{attach_point}'",
                 )
-            reachable = _bfs_reachable(start_ids, seq_edges)
+            reachable = _bfs_reachable(start_ids, seq_edges, boundary_map)
 
     # --- 2. Rattachement de toute impasse (hors endEvent) vers une sortie ---
     # Operate PER-POOL to avoid creating cross-pool spurious edges.
@@ -1847,6 +2296,13 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
             sanitized_process = dict(process_info)
             sanitized_process["id"] = _sanitize_id(pid, set())
 
+    # --- Garantie d'un eventDefinition valide sur tout événement de capture,
+    # AVANT toute autre passe : un catch/boundary event sans déclencheur est une
+    # erreur fatale de schéma, jamais laissée survivre jusqu'à la sortie finale
+    # du pipeline après échec du self-healing (cf. régression confirmée sur le
+    # scénario d'attente conditionnelle du stock). ---
+    _ensure_catch_and_boundary_event_definition(nodes)
+
     # Une lane unique dans un pool ne sépare aucun rôle et n'apporte donc rien
     # (cf. règle 6.3 de SKILL.md : les lanes servent à distinguer PLUSIEURS
     # rôles au sein d'un même participant). On la fusionne dans son pool pour
@@ -1864,6 +2320,12 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
                         n.pop("laneId", None)
 
     node_map = {n["id"]: n for n in nodes if isinstance(n.get("id"), str)}
+
+    # --- Cohérence de pool des enfants de subProcess, AVANT toute passe
+    # d'assignation/propagation de poolId : un enfant ne doit jamais diverger
+    # de la pool de son conteneur. ---
+    _ensure_subprocess_children_share_pool(nodes, node_map)
+
     seq_edges = [e for e in edges if e.get("type") in ("sequenceFlow", None)]
 
     def next_flow_id() -> str:
@@ -2068,6 +2530,17 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
             target = msg["target"]
             if target not in node_map:
                 continue
+            # Ne jamais dupliquer en sequenceFlow une relation déjà portée par un
+            # messageFlow qui traverse une frontière de pool CONNUE : un startEvent
+            # "déclencheur ponctuel" (qui n'a d'autre rôle que d'envoyer ce message,
+            # cf. section 6.2 de SKILL.md) n'a besoin d'AUCUNE continuation interne —
+            # créer ce sequenceFlow produisait un flux inter-pool invalide qu'une
+            # passe ultérieure redirigeait ensuite vers le conteneur subProcess du
+            # target, une erreur fatale POOL-001 (régression confirmée).
+            start_pool = node_map[start_id].get("poolId")
+            target_pool = node_map.get(target, {}).get("poolId")
+            if isinstance(start_pool, str) and isinstance(target_pool, str) and start_pool != target_pool:
+                break
             if not has_edge(start_id, target):
                 add_edge(start_id, target)
             if not node_map[start_id].get("poolId") and node_map.get(target, {}).get("poolId"):
@@ -2280,11 +2753,31 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
             if e in seq_edges:
                 seq_edges.remove(e)
 
+    # --- Réparation mécanique d'un gateway relié directement à une autre pool
+    # (sequenceFlow ou messageFlow) : un gateway n'est JAMAIS un point de
+    # communication valide. Le rappel dans le prompt de self-healing ne suffit
+    # pas de façon fiable (régressions confirmées) — insertion automatique
+    # d'une tâche relais dans la pool du gateway. ---
+    _fix_gateway_pool_crossing_edges(nodes, node_map, edges, seq_edges, pools)
+
+    # --- Suppression mécanique d'un flux de boundaryEvent qui reboucle vers sa
+    # propre tâche hôte, AVANT toute passe de dédoublement/gateway : cette arête
+    # est TOUJOURS erronée (un boundary event ouvre une branche latérale, jamais
+    # un redémarrage) et fausserait sinon les décisions des passes suivantes. ---
+    _remove_boundary_event_reboop_to_own_host(edges, seq_edges, node_map, source_text)
+
     # --- Dédoublement mécanique des tâches fusionnées à tort (N entrants = N
     # sortants sur un nœud non-gateway), AVANT toute autre passe : une fusion
     # invalide ne doit jamais survivre à la normalisation, qu'elle vienne de la
     # génération initiale ou d'une régression introduite par le self-healing. ---
     _split_erroneously_merged_tasks(nodes, node_map, edges, seq_edges)
+
+    # --- Dédoublement mécanique d'un nœud fusionné à tort par CONVERGENCE depuis
+    # 2+ gateways non liés (cf. section 2 de SKILL.md) : même principe que
+    # ci-dessus, pour le pattern où la fusion vient d'une convergence plutôt que
+    # d'un fan-out direct — régression confirmée introduite par le self-healing
+    # lui-même. ---
+    _split_cross_gateway_merged_node(nodes, node_map, edges, seq_edges)
 
     # --- Filet de sécurité pour tout nœud non-gateway multi-sortant restant
     # (cas asymétrique non couvert par le dédoublement ci-dessus, cf. BUG 2 de
@@ -2300,6 +2793,15 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
     # --- Chaque subProcess doit avoir son propre startEvent/endEvent internes
     # (cf. section 9.1 de SKILL.md), AVANT toute autre passe de reconnexion. ---
     _ensure_subprocess_internal_events(nodes, node_map, seq_edges, add_edge)
+
+    # Recalculé à partir de `edges` (source de vérité) plutôt que réutilisé tel
+    # quel : plusieurs passes mécaniques ci-dessus (ex: _fix_gateway_pool_crossing_edges)
+    # créent de nouveaux messageFlow directement dans `edges` sans forcément mettre
+    # à jour cette liste locale — une désynchronisation ferait ignorer ces nouvelles
+    # arêtes par le calcul d'accessibilité ci-dessous (régression confirmée : un
+    # nœud relié uniquement par un messageFlow fraîchement créé était vu à tort
+    # comme une composante déconnectée et rattaché n'importe où).
+    message_edges = [e for e in edges if isinstance(e, dict) and e.get("type") == "messageFlow"]
 
     # --- Terminaison nommée des tâches d'envoi/notification en impasse, AVANT le
     # rattachement générique de secours (voir _ensure_named_end_for_dangling_sends) ---
@@ -2391,6 +2893,12 @@ def validate_process_description(process_desc: dict[str, Any]) -> ValidationResu
 
     if not isinstance(process_desc, dict):
         return ValidationResult(ok=False, errors=["Process Description must be a JSON object"])
+
+    # Assainissement mécanique des IDs non conformes (accents FR, etc.) AVANT
+    # la validation JSON-Schema — en place, donc visible par l'appelant sans
+    # dépendre d'une correction LLM qui peut échouer plusieurs fois de suite
+    # sur le même ID (cf. _sanitize_process_description_ids).
+    _sanitize_process_description_ids(process_desc)
 
     schema_path = Path(__file__).parent.parent / "schema" / "process-description.schema.json"
     if jsonschema is not None:
@@ -2826,12 +3334,19 @@ def validate_logic_core(logic_core: dict[str, Any], source_text: str | None = No
         # séquentielle y est donc normale, pas une impasse à signaler.
         is_compensation = bool(node.get("isForCompensation"))
 
+        # Un subProcess événementiel (triggeredByEvent=true) n'a par conception
+        # ni sequenceFlow entrant (déclenché par son propre startEvent interne,
+        # pas par le flux parent) ni nécessairement de sortant (il peut se
+        # contenter de terminer la branche qu'il interrompt) — cf. section 9.1
+        # de SKILL.md.
+        is_event_subprocess = ntype == "subProcess" and bool(node.get("triggeredByEvent"))
+
         # StartEvent et BoundaryEvent n'ont pas d'entrée
-        if ntype not in ("startEvent", "boundaryEvent") and not is_subprocess_child and not is_compensation and len(seq_incoming[nid]) == 0 and not message_incoming:
+        if ntype not in ("startEvent", "boundaryEvent") and not is_subprocess_child and not is_compensation and not is_event_subprocess and len(seq_incoming[nid]) == 0 and not message_incoming:
             errors.append(f"Nœud '{nid}' ({ntype} : '{node.get('name', '')}') n'a aucune transition séquentielle entrante.")
 
         # EndEvent n'a pas de sortie
-        if ntype != "endEvent" and not is_subprocess_child and not is_compensation and len(seq_outgoing[nid]) == 0 and not message_outgoing:
+        if ntype != "endEvent" and not is_subprocess_child and not is_compensation and not is_event_subprocess and len(seq_outgoing[nid]) == 0 and not message_outgoing:
             errors.append(f"Nœud '{nid}' ({ntype} : '{node.get('name', '')}') n'a aucune transition séquentielle sortante (impasse).")
 
     # 8. Validation approfondie des Passerelles (Gateways)
@@ -2906,6 +3421,8 @@ def validate_logic_core(logic_core: dict[str, Any], source_text: str | None = No
             continue  # connectivité interne au subProcess, cf. section 9.1 de SKILL.md
         if node.get("isForCompensation"):
             continue  # atteinte uniquement via association de compensation, jamais par sequenceFlow
+        if node.get("type") == "subProcess" and node.get("triggeredByEvent"):
+            continue  # déclenché par son propre startEvent interne, jamais par le flux parent (section 9.1)
         if nid not in visited_from_start:
             errors.append(f"Nœud '{nid}' ({node.get('type')}) est inaccessible depuis les événements de début.")
 

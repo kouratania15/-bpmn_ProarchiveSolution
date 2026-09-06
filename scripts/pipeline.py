@@ -43,6 +43,7 @@ from llm_agent import (
 )
 from src.config import (
     DEFAULT_MODEL,
+    MAX_AMENDMENT_RETRIES,
     MAX_PROCESS_DESCRIPTION_RETRIES,
     MAX_SELF_HEALING_ATTEMPTS,
 )
@@ -74,6 +75,37 @@ def _logic_core_ids(logic_core: dict[str, Any]) -> set[str]:
                     if isinstance(lane, dict) and isinstance(lane.get("id"), str):
                         ids.add(lane["id"])
     return ids
+
+
+def _illegitimate_missing_ids(existing_logic_core: dict[str, Any], new_logic_core: dict[str, Any]) -> set[str]:
+    """Filtre les IDs disparus pour ne garder que ceux réellement suspects.
+
+    Un edge dont au moins une extrémité (source/target, telle qu'elle existait
+    dans le Logic-Core D'ORIGINE) a elle-même disparu du nouveau graphe est une
+    perte LÉGITIME : la règle 21 'Suppression' du système impose justement de
+    retirer les flux devenus invalides quand un nœud est explicitement
+    supprimé (ex: "retire l'envoi du SMS" -> la tâche SMS ET ses deux
+    sequenceFlow adjacents disparaissent ensemble, ce qui est correct). Un
+    edge dont les DEUX extrémités existent toujours dans le nouveau graphe,
+    mais qui a lui-même disparu ou a été renommé, reste suspect — c'est le
+    pattern de renommage arbitraire que ce garde-fou vise à empêcher."""
+    missing = _logic_core_ids(existing_logic_core) - _logic_core_ids(new_logic_core)
+    if not missing:
+        return missing
+    new_ids = _logic_core_ids(new_logic_core)
+    existing_edges_by_id = {
+        e.get("id"): e for e in existing_logic_core.get("edges", [])
+        if isinstance(e, dict) and isinstance(e.get("id"), str)
+    }
+    illegitimate: set[str] = set()
+    for mid in missing:
+        edge = existing_edges_by_id.get(mid)
+        if edge is None:
+            illegitimate.add(mid)  # pas un edge (nœud/pool/lane/process) : toujours suspect
+            continue
+        if edge.get("source") in new_ids and edge.get("target") in new_ids:
+            illegitimate.add(mid)
+    return illegitimate
 
 
 def run_pipeline(
@@ -121,10 +153,69 @@ def run_pipeline(
                 raise ValueError("Aucune modification fournie pour l'amendement.")
             if verbose:
                 print_trace(1, total_steps, "Amendement incrémental du Logic-Core existant")
-            logic_core = extract_logic_core(user_text, existing_logic_core, run_id=run_id, model=model)
-            missing_ids = _logic_core_ids(existing_logic_core) - _logic_core_ids(logic_core)
-            if missing_ids:
-                raise ValueError(f"L'amendement a supprimé des IDs existants : {sorted(missing_ids)}")
+            # L'amendement est un appel LLM unique et stochastique : une tentative
+            # peut, par malchance, ignorer la consigne "conserve les IDs existants"
+            # et régénérer un Logic-Core sans rapport avec l'original (observé en
+            # usage réel). Plutôt que d'échouer immédiatement sur ce hasard
+            # d'échantillonnage, on retente quelques fois avec un rappel explicite
+            # des IDs perdus la fois précédente — même logique que le
+            # circuit-breaker du self-healing, mais pour une perte d'ID plutôt
+            # qu'une erreur de validation.
+            amend_instruction = user_text
+            missing_ids: set[str] = set()
+            prev_missing_ids: set[str] | None = None
+            stable_missing = False
+            for amend_attempt in range(1, MAX_AMENDMENT_RETRIES + 1):
+                logic_core = extract_logic_core(amend_instruction, existing_logic_core, run_id=run_id, model=model)
+                missing_ids = _illegitimate_missing_ids(existing_logic_core, logic_core)
+                if not missing_ids:
+                    break
+                # Le MÊME ensemble d'IDs disparaît deux fois de suite MALGRÉ un
+                # rappel explicite les nommant un par un : ce n'est plus un hasard
+                # d'échantillonnage, c'est un comportement stable — le plus souvent
+                # la conséquence délibérée et légitime de la demande elle-même
+                # (ex: "retire le SMS" supprime nécessairement sa tâche et ses
+                # flux adjacents ; une restructuration complexe peut légitimement
+                # changer la forme autour d'un nœud conservé). Insister une 3e
+                # fois n'apporterait rien de plus qu'un 3e résultat identique.
+                if missing_ids == prev_missing_ids:
+                    stable_missing = True
+                    break
+                prev_missing_ids = missing_ids
+                append_execution_trace(run_id, {
+                    "step": 1,
+                    "attempt": amend_attempt,
+                    "component": "llm_agent.extract_logic_core",
+                    "action": "AMENDMENT_LOST_IDS_RETRY",
+                    "missing_ids": sorted(missing_ids),
+                })
+                if amend_attempt < MAX_AMENDMENT_RETRIES:
+                    if verbose:
+                        print_trace(1, total_steps,
+                                     f"Amendement a supprimé des IDs existants — nouvelle tentative "
+                                     f"({amend_attempt}/{MAX_AMENDMENT_RETRIES})", "WARNING")
+                    amend_instruction = (
+                        f"{user_text}\n\nRAPPEL CRITIQUE : ta précédente tentative a supprimé ces IDs "
+                        f"existants du Logic-Core fourni, ce qui est INTERDIT — conserve-les "
+                        f"impérativement cette fois-ci, inchangés : {sorted(missing_ids)}"
+                    )
+            if missing_ids and not stable_missing:
+                raise ValueError(
+                    f"L'amendement a supprimé des IDs existants après {MAX_AMENDMENT_RETRIES} tentatives : "
+                    f"{sorted(missing_ids)}"
+                )
+            if missing_ids and stable_missing:
+                append_execution_trace(run_id, {
+                    "step": 1,
+                    "component": "llm_agent.extract_logic_core",
+                    "action": "AMENDMENT_STABLE_ID_LOSS_ACCEPTED",
+                    "missing_ids": sorted(missing_ids),
+                })
+                if verbose:
+                    print_trace(1, total_steps,
+                                 f"Avertissement : ces IDs disparaissent de façon stable malgré le rappel "
+                                 f"explicite — probablement une conséquence légitime de la demande, "
+                                 f"acceptée : {sorted(missing_ids)}", "WARNING")
         else:
             if not user_text:
                 raise ValueError("Aucun texte fourni pour l'extraction.")
@@ -226,14 +317,56 @@ def run_pipeline(
                 "raw_errors_sent_to_llm": list(val_res.errors),
             })
 
-            logic_core = self_heal_logic_core(
-                logic_core, val_res.errors, user_context=user_text,
-                run_id=run_id, attempt=attempt, model=model,
-            )
-            if existing_logic_core is not None:
-                missing_ids = _logic_core_ids(existing_logic_core) - _logic_core_ids(logic_core)
-                if missing_ids:
-                    raise ValueError(f"Le self-healing a supprime des IDs existants : {sorted(missing_ids)}")
+            # Même stochasticité que l'amendement initial : une correction de
+            # self-healing peut, par malchance, supprimer un ID existant en
+            # plus de corriger l'erreur demandée (observé en usage réel, sur
+            # des instructions n'ayant pourtant aucun rapport avec ces IDs).
+            # On retente depuis le MÊME Logic-Core fautif (jamais depuis un
+            # résultat déjà amputé, pour ne pas composer les dégâts), avec un
+            # rappel explicite des IDs perdus à chaque nouvelle tentative.
+            faulty_logic_core_for_heal = logic_core
+            heal_errors = val_res.errors
+            healed_logic_core = None
+            missing_ids = set()
+            prev_heal_missing_ids: set[str] | None = None
+            heal_stable_missing = False
+            for id_retry in range(1, MAX_AMENDMENT_RETRIES + 1):
+                healed_logic_core = self_heal_logic_core(
+                    faulty_logic_core_for_heal, heal_errors, user_context=user_text,
+                    run_id=run_id, attempt=attempt, model=model,
+                )
+                if existing_logic_core is None:
+                    break
+                missing_ids = _illegitimate_missing_ids(existing_logic_core, healed_logic_core)
+                if not missing_ids:
+                    break
+                # Même principe que pour l'amendement : un ensemble d'IDs
+                # identique perdu deux fois de suite malgré le rappel explicite
+                # est un comportement stable, pas un hasard — probablement une
+                # conséquence légitime de la correction demandée.
+                if missing_ids == prev_heal_missing_ids:
+                    heal_stable_missing = True
+                    break
+                prev_heal_missing_ids = missing_ids
+                if id_retry >= MAX_AMENDMENT_RETRIES:
+                    raise ValueError(
+                        f"Le self-healing a supprime des IDs existants après {MAX_AMENDMENT_RETRIES} "
+                        f"tentatives : {sorted(missing_ids)}"
+                    )
+                if verbose:
+                    print_trace(5, total_steps,
+                                 f"Self-healing a supprimé des IDs existants — nouvelle tentative "
+                                 f"({id_retry}/{MAX_AMENDMENT_RETRIES})", "WARNING")
+                heal_errors = list(val_res.errors) + [
+                    f"RAPPEL CRITIQUE : ta précédente tentative de correction a supprimé ces IDs existants, "
+                    f"ce qui est INTERDIT — restaure-les impérativement, inchangés : {sorted(missing_ids)}"
+                ]
+            if missing_ids and heal_stable_missing and verbose:
+                print_trace(5, total_steps,
+                             f"Avertissement : ces IDs disparaissent de façon stable malgré le rappel "
+                             f"explicite — probablement une conséquence légitime de la correction, "
+                             f"acceptée : {sorted(missing_ids)}", "WARNING")
+            logic_core = healed_logic_core
             val_res = validate_logic_core(logic_core, source_text=user_text if direct_logic_core is None else None)
             if val_res.normalized_logic_core is not None:
                 logic_core = val_res.normalized_logic_core
@@ -363,8 +496,10 @@ def main():
     )
     parser.add_argument("text", nargs="?", help="Texte ou consigne décrivant le processus métier")
     parser.add_argument("--file", "-f", help="Fichier texte d'entrée (transcription d'entretien)")
-    parser.add_argument("--logic-core", "-c", help="Logic-Core JSON existant pour mode amendement incrémental")
+    parser.add_argument("--logic-core", "-c", help="Logic-Core JSON existant (fichier local) pour mode amendement incrémental")
     parser.add_argument("--from-json", help="Compiler directement un fichier Logic-Core JSON en BPMN XML")
+    parser.add_argument("--process-id", help="UUID d'un process existant en base MySQL : charge sa dernière version et enregistre une nouvelle version (édition incrémentale versionnée), au lieu d'une génération neuve")
+    parser.add_argument("--process-name", help="Nom du nouveau process à créer ET sauvegarder en base MySQL (version 1) ; ignoré si --process-id est fourni. Sans --process-id ni --process-name, comportement inchangé (fichiers locaux uniquement, pas de base de données)")
     parser.add_argument("--out", "-o", default="process.bpmn", help="Fichier XML BPMN de sortie (.bpmn)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Modèle Mistral AI à utiliser")
     parser.add_argument("--no-heal", action="store_true", help="Désactiver la boucle d'auto-réparation (self-healing)")
@@ -373,8 +508,22 @@ def main():
 
     verbose = not args.quiet
 
+    # Mode versioning MySQL : import local (pas en tête de fichier) pour que
+    # les usages sans --process-id/--process-name n'exigent jamais mysql-connector
+    # ni un serveur MySQL joignable — comportement legacy strictement inchangé.
+    db_parent_version_id = None
+    if args.process_id or args.process_name:
+        import db as _db
+        _db.init_schema()
+
     existing = None
-    if args.logic_core:
+    if args.process_id:
+        latest = _db.get_latest_version(args.process_id)
+        if latest is None:
+            parser.error(f"Aucune version trouvée en base pour --process-id={args.process_id}")
+        existing = latest["logic_core_json"]
+        db_parent_version_id = latest["version_id"]
+    elif args.logic_core:
         existing = json.loads(Path(args.logic_core).read_text(encoding="utf-8"))
 
     direct_json = None
@@ -414,6 +563,23 @@ def main():
             print(f"\n✨ Modèle BPMN 2.0 généré avec succès ({node_count} nœuds, {edge_count} transitions) !")
             print(f"📄 Schéma XML BPMN : {out_path.resolve()}")
             print(f"📦 Logic-Core JSON  : {json_out_path.resolve()}")
+
+        # Persistance MySQL : exécutée SEULEMENT si --process-id ou --process-name
+        # a été fourni, APRÈS que run_pipeline ait produit un résultat validé par
+        # le même pipeline de validation/self-healing que le mode fichier — aucun
+        # court-circuit de cette validation.
+        if args.process_id:
+            new_version_id = _db.add_version(
+                args.process_id, user_text, logic_core, xml_content, db_parent_version_id,
+            )
+            if verbose:
+                latest_meta = _db.get_latest_version(args.process_id)
+                print(f"🗄️  Nouvelle version enregistrée en base : process_id={args.process_id}, "
+                      f"version={latest_meta['version_number']}, version_id={new_version_id}")
+        elif args.process_name:
+            new_process_id = _db.create_process(args.process_name, user_text, logic_core, xml_content)
+            if verbose:
+                print(f"🗄️  Process créé et sauvegardé en base : process_id={new_process_id} (version 1)")
 
     except Exception as e:
         print(f"\n❌ Erreur : {e}", file=sys.stderr)

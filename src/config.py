@@ -18,6 +18,16 @@ MAX_PROCESS_DESCRIPTION_RETRIES = 3
 # multiplier excessivement les appels API sur un compte à quota limité.
 MAX_SELF_HEALING_ATTEMPTS = 5
 
+# L'amendement incrémental (mode --process-id / --logic-core) est un unique
+# appel LLM stochastique qui peut, par malchance d'échantillonnage, ignorer la
+# consigne "conserve tous les IDs existants" et régénérer un Logic-Core sans
+# rapport avec l'original — observé en usage réel, corrigé de façon fiable par
+# un simple nouvel essai (cf. pipeline.run_pipeline). Ne pas confondre avec
+# MAX_SELF_HEALING_ATTEMPTS : celui-ci corrige des erreurs de VALIDATION avec
+# un contexte qui évolue à chaque tentative, celui-ci ne fait que retenter le
+# même appel (avec un rappel renforcé) en cas de perte d'ID.
+MAX_AMENDMENT_RETRIES = 3
+
 # Niveau de trace
 TRACE_LEVEL = "INFO"  # "INFO", "DEBUG", "WARNING", "ERROR"
 

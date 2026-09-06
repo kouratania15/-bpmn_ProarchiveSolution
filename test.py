@@ -29,52 +29,41 @@ REPORT_FILE = Path("rapport_tests_v2.md")
 # ----------------------------------------------------------------------
 TESTS = [
     
-    (
-        "v2_test05_gateway_inclusif",
-        "Gateway inclusif (OR)",
-        "Un locataire signale un problème dans son appartement. Si le problème concerne la "
-        "plomberie, le plombier intervient. Si le problème concerne l'électricité, l'électricien "
-        "intervient. Une fois les interventions nécessaires terminées, le gestionnaire clôture le "
-        "signalement."
+   (
+        "v2_test23_event_subprocess",
+        "Sous-processus événementiel (interruptif)",
+        "L'hôtel traite une réservation de chambre de bout en bout. À tout moment pendant ce "
+        "traitement, si le client annule sa réservation, un sous-processus dédié à l'annulation se "
+        "déclenche immédiatement, interrompt le traitement en cours, rembourse le client et libère "
+        "la chambre."
     ),
-    
     (
-        "v2_test07_multi_acteurs",
-        "Plusieurs acteurs / lanes",
-        "Un patient consulte son médecin traitant. Le médecin prescrit une analyse de sang. Le "
-        "laboratoire réalise l'analyse. Si les résultats sont anormaux, le spécialiste examine le "
-        "patient. Sinon, le médecin traitant informe le patient que tout est normal."
+        "v2_test24_call_activity",
+        "Call Activity (processus réutilisable)",
+        "Le service des ressources humaines reçoit une demande de congé. Le système appelle le "
+        "processus standard de validation hiérarchique, utilisé également par le service "
+        "informatique et le service commercial pour d'autres types de demandes internes. Une fois "
+        "la validation hiérarchique obtenue via ce processus partagé, le service RH confirme le "
+        "congé à l'employé."
     ),
-    
     (
-        "v2_test11_conditions_combinees",
-        "Conditions combinées (3 branches)",
-        "Une banque étudie une demande de carte de crédit. L'agent vérifie si le revenu est "
-        "suffisant et si l'historique de crédit est bon. Si les deux conditions sont remplies, "
-        "l'agent approuve la carte avec un plafond élevé. Si une seule condition est remplie, "
-        "l'agent approuve la carte avec un plafond réduit. Si aucune condition n'est remplie, "
-        "l'agent rejette la demande."
+        "v2_test25_adhoc_subprocess",
+        "Sous-processus Ad-Hoc (ordre libre)",
+        "Une agence de communication prépare le lancement d'un produit. Les tâches suivantes "
+        "peuvent être réalisées dans n'importe quel ordre, selon la disponibilité des équipes : "
+        "rédiger le communiqué de presse, concevoir les visuels publicitaires, contacter les "
+        "influenceurs, et préparer la page de vente en ligne. Une fois toutes les tâches "
+        "terminées, le lancement est considéré comme prêt."
     ),
-  
-    
- 
-    
     (
-        "v2_test19_escalation",
-        "Événement d'escalade",
-        "Un technicien traite un incident informatique. Si l'incident n'est pas résolu après 4 "
-        "heures, une escalade est déclenchée vers l'expert senior, qui prend en charge le dossier "
-        "en parallèle sans interrompre les tentatives du technicien. Sinon, le technicien résout "
-        "l'incident seul."
+        "v2_test26_transactional_subprocess",
+        "Sous-processus transactionnel",
+        "Dans le cadre d'une vente immobilière, le processus doit signer l'acte notarié et "
+        "transférer les fonds comme une seule opération. Si le transfert des fonds échoue après "
+        "que l'acte a déjà été signé, toutes les étapes précédentes, y compris la signature de "
+        "l'acte, doivent être annulées. Si tout se déroule correctement, la vente est finalisée."
     ),
-    
-    (
-        "v2_test22_conditional_event",
-        "Événement conditionnel",
-        "Un client place une commande en rupture de stock. La commande reste en attente jusqu'à ce "
-        "que le stock du produit soit à nouveau supérieur à zéro. Dès que cette condition devient "
-        "vraie, l'entrepôt peut préparer l'expédition de la commande."
-    ),
+   
     
 ]
 

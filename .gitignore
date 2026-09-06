@@ -18,6 +18,7 @@ out/
 logs/
 reports/
 scratch/
+tests_output_versioning/
 
 # --- Fichiers générés / exemples / expérimentations (pas du code essentiel) ---
 /*.bpmn
@@ -25,9 +26,12 @@ scratch/
 examples/
 experiment.json
 ANALYSIS_REPORT.md
+debug_*.json
+debug_*.txt
 
 # --- Editeur / OS ---
 .vscode/
 .idea/
+.claude/
 Thumbs.db
 .DS_Store

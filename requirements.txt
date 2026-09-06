@@ -8,3 +8,5 @@ jsonschema>=4.20.0
 pytest>=8.0.0
 # 5. Chargement des variables d'environnement depuis .env
 python-dotenv>=1.0.0
+# 6. Connecteur MySQL pour le versioning des schémas BPMN
+mysql-connector-python>=9.0.0

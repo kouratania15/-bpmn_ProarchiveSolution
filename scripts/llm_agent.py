@@ -99,6 +99,24 @@ def _strip_schema_metadata(obj: Any) -> Any:
 	return obj
 
 
+def _unwrap_if_wrapped(obj: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
+	"""Si le modèle enveloppe sa réponse dans une clé racine inattendue (ex:
+	{"logic_core": {...contenu réel...}} au lieu du contenu directement à la
+	racine), _prune_extra_properties supprimerait TOUT le contenu utile : aucune
+	propriété racine attendue ('process', 'nodes', 'edges'...) ne correspond,
+	et le résultat élagué devient un objet vide — observé en usage réel sur un
+	amendement pourtant parfaitement correct en substance, silencieusement
+    réduit à {} par ce seul détail d'enveloppe. Détecter ce cas AVANT l'élagage
+	et déballer plutôt que de laisser l'élagage tout supprimer."""
+	required = schema.get("required")
+	if not isinstance(required, list) or not required or set(required).issubset(obj.keys()):
+		return obj
+	for value in obj.values():
+		if isinstance(value, dict) and set(required).issubset(value.keys()):
+			return value
+	return obj
+
+
 def _prune_extra_properties(obj: Any, schema: dict[str, Any]) -> Any:
 	"""Retire récursivement les propriétés non déclarées dans le schema quand
 	additionalProperties=false. Les schémas de ce projet (structured-analysis,
@@ -110,6 +128,7 @@ def _prune_extra_properties(obj: Any, schema: dict[str, Any]) -> Any:
 	if not isinstance(schema, dict):
 		return obj
 	if isinstance(obj, dict) and schema.get("type") == "object":
+		obj = _unwrap_if_wrapped(obj, schema)
 		properties = schema.get("properties", {})
 		if schema.get("additionalProperties") is False:
 			obj = {k: v for k, v in obj.items() if k in properties}
@@ -684,8 +703,21 @@ def extract_logic_core(user_text: str, existing_logic_core: dict[str, Any] | Non
 	"""API historique conservée pour les intégrations existantes."""
 	if existing_logic_core is not None:
 		prompt = (
-			"Amende ce Logic-Core avec la demande utilisateur. Conserve tous les IDs existants et "
-			"toutes les parties non concernées. Réponds uniquement en JSON.\n"
+			"Amende ce Logic-Core avec la demande utilisateur. Conserve tous les IDs existants (nœuds, "
+			"edges, pools, lanes) et toutes les parties non concernées. Réponds uniquement en JSON.\n"
+			"Rappel critique (règle 21 du système, cf. 'Insertion') : si la demande insère une nouvelle "
+			"étape C entre deux éléments A et B déjà reliés par un sequenceFlow existant, ce sequenceFlow "
+			"A->B a déjà un ID — RÉUTILISE cet ID EXACT pour le segment A->C résultant (change seulement "
+			"son 'target' de B vers C), et crée un NOUVEL ID uniquement pour le second segment C->B. "
+			"Renommer l'ID du sequenceFlow A->B original est INTERDIT, même si sa cible change : c'est "
+			"une suppression d'ID au même titre qu'un nœud supprimé, et la modification sera rejetée.\n"
+			"MÊME RÈGLE si la demande transforme un flux A->B existant en embranchement conditionnel "
+			"(A->gateway->[B, C], une nouvelle alternative ajoutée à une décision) : RÉUTILISE l'ID du "
+			"sequenceFlow A->B existant pour le segment gateway->B (change seulement sa 'source' de A vers "
+			"le nouveau gateway), et crée des IDs nouveaux uniquement pour A->gateway et gateway->C. Cette "
+			"règle s'applique à TOUT sequenceFlow existant qui reste conceptuellement le même flux mais "
+			"voit son point de départ ou d'arrivée réaffecté à un nœud nouvellement inséré — jamais un "
+			"renommage, toujours une réaffectation de la même arête.\n"
 			f"Logic-Core:\n{json.dumps(existing_logic_core, ensure_ascii=False)}\nDemande:\n{user_text}"
 		)
 		messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
