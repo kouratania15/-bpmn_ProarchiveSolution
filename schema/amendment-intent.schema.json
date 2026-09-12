@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "amendment-intent.schema.json",
+  "title": "Amendment Intent Schema",
+  "description": "Classification structurée d'une instruction d'amendement avant son application au Logic-Core existant (étape [A] de l'architecture d'amendement).",
+  "type": "object",
+  "required": [
+    "operation_type",
+    "target_anchors",
+    "evidence_quote",
+    "conditional_evidence",
+    "replacement_new_type",
+    "expected_diff"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "operation_type": {
+      "type": "string",
+      "description": "Sous-catégorie précise de l'opération d'amendement demandée (cf. section 24 de SKILL.md).",
+      "enum": [
+        "insert_sequential",
+        "insert_conditional_exclusive",
+        "insert_conditional_inclusive",
+        "insert_parallel",
+        "insert_event_based_gateway",
+        "insert_complex_gateway",
+        "insert_loop_backward",
+        "add_actor_internal_lane",
+        "add_actor_external_pool",
+        "add_subprocess_embedded",
+        "add_call_activity",
+        "add_subprocess_adhoc",
+        "add_subprocess_transactional",
+        "add_subprocess_event",
+        "add_timer_event",
+        "add_signal_event",
+        "add_escalation_event",
+        "add_compensation_event",
+        "add_conditional_event",
+        "add_terminate_event",
+        "add_multi_instance",
+        "add_data_object",
+        "delete_task_simple",
+        "delete_gateway_branch",
+        "delete_gateway_full",
+        "delete_actor",
+        "delete_subprocess",
+        "delete_event",
+        "delete_data_object",
+        "rename_only",
+        "replace_task",
+        "replace_gateway_type",
+        "change_task_actor",
+        "change_gateway_condition"
+      ]
+    },
+    "target_anchors": {
+      "type": "array",
+      "description": "IDs RÉELS (déjà présents dans le Logic-Core fourni) des nœuds/edges concernés par l'opération — jamais devinés par proximité de nom.",
+      "items": { "type": "string" }
+    },
+    "evidence_quote": {
+      "type": "string",
+      "description": "Citation exacte, extraite de l'instruction d'amendement, justifiant la classification choisie."
+    },
+    "conditional_evidence": {
+      "type": ["string", "null"],
+      "description": "Marqueur conditionnel exact trouvé dans l'instruction ('si', 'sinon', 'selon que', ...), ou null si aucun marqueur conditionnel n'est présent."
+    },
+    "replacement_new_type": {
+      "type": ["string", "null"],
+      "description": "Pour une opération de type replace_task/replace_gateway_type : le type BPMN attendu du nouvel élément, réévalué depuis la nature de ce nouvel élément SEULE (jamais hérité de l'ancien). Null pour toute autre opération."
+    },
+    "expected_diff": {
+      "type": "object",
+      "description": "Prédiction de l'ampleur structurelle attendue du changement, utilisée comme garde-fou de cohérence après application.",
+      "required": ["nodes_added", "nodes_removed", "gateways_added"],
+      "additionalProperties": false,
+      "properties": {
+        "nodes_added": { "type": "integer", "minimum": 0 },
+        "nodes_removed": { "type": "integer", "minimum": 0 },
+        "gateways_added": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

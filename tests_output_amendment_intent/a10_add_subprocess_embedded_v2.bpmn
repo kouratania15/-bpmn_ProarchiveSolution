@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reclamation"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_reclamation">
+    <bpmn:participant id="pool_company" name="Entreprise" processRef="process_reclamation" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_reclamation" name="Entreprise" isExecutable="true">
+    <bpmn:startEvent id="start_reclamation" name="Réclamation soumise">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_company&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_client</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_client_soumet_reclamation" name="Client soumet une réclamation">
+      <bpmn:incoming>flow_start_client</bpmn:incoming>
+      <bpmn:outgoing>flow_client_agent</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_agent_traitement" name="Agent traite la réclamation">
+      <bpmn:incoming>flow_client_agent</bpmn:incoming>
+      <bpmn:outgoing>flow_agent_verifier_historique</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_verifier_historique" name="Vérifier l&#x27;historique du client">
+      <bpmn:incoming>flow_agent_verifier_historique</bpmn:incoming>
+      <bpmn:outgoing>flow_verifier_evaluer</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_evaluer_validite" name="Évaluer la validité de la réclamation">
+      <bpmn:incoming>flow_verifier_evaluer</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluer_proposer</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_proposer_compensation" name="Proposer une compensation">
+      <bpmn:incoming>flow_evaluer_proposer</bpmn:incoming>
+      <bpmn:outgoing>flow_proposer_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reclamation_traitee" name="Réclamation traitée">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_company&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_proposer_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_client" name="" sourceRef="start_reclamation" targetRef="task_client_soumet_reclamation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_client_agent" name="" sourceRef="task_client_soumet_reclamation" targetRef="task_agent_traitement">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_agent_verifier_historique" name="" sourceRef="task_agent_traitement" targetRef="task_verifier_historique">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_verifier_evaluer" name="" sourceRef="task_verifier_historique" targetRef="task_evaluer_validite">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_evaluer_proposer" name="" sourceRef="task_evaluer_validite" targetRef="task_proposer_compensation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_proposer_end" name="" sourceRef="task_proposer_compensation" targetRef="end_reclamation_traitee">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reclamation">
+      <bpmndi:BPMNShape id="pool_company_di" bpmnElement="pool_company" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1216" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reclamation_di" bpmnElement="start_reclamation">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_client_soumet_reclamation_di" bpmnElement="task_client_soumet_reclamation">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_agent_traitement_di" bpmnElement="task_agent_traitement">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verifier_historique_di" bpmnElement="task_verifier_historique">
+        <dc:Bounds x="600" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_validite_di" bpmnElement="task_evaluer_validite">
+        <dc:Bounds x="760" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_proposer_compensation_di" bpmnElement="task_proposer_compensation">
+        <dc:Bounds x="920" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reclamation_traitee_di" bpmnElement="end_reclamation_traitee">
+        <dc:Bounds x="1080" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_client_di" bpmnElement="flow_start_client">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_client_agent_di" bpmnElement="flow_client_agent">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_agent_verifier_historique_di" bpmnElement="flow_agent_verifier_historique">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="600" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verifier_evaluer_di" bpmnElement="flow_verifier_evaluer">
+        <di:waypoint x="700" y="130" />
+        <di:waypoint x="760" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_proposer_di" bpmnElement="flow_evaluer_proposer">
+        <di:waypoint x="860" y="130" />
+        <di:waypoint x="920" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_proposer_end_di" bpmnElement="flow_proposer_end">
+        <di:waypoint x="1020" y="130" />
+        <di:waypoint x="1050" y="130" />
+        <di:waypoint x="1050" y="108" />
+        <di:waypoint x="1080" y="108" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1440,6 +1440,29 @@ Lorsqu'un nouvel élément est créé, lui attribuer un nouvel ID unique et stab
 
 Lorsqu'une modification est demandée sur un Logic-Core existant :
 
+## Distinction : insertion séquentielle vs ajout d'une alternative
+
+Une instruction d'amendement ne décrit une alternative (§ Ajout d'une alternative, gateway XOR) que si elle
+contient un marqueur conditionnel explicite : "si", "selon que", "dans le cas où", "sinon", "uniquement si",
+"à condition que". En l'absence de tout marqueur conditionnel, les formulations "ajoute X après Y", "insère
+X avant Y", "ajoute une étape de X" décrivent systématiquement une insertion SÉQUENTIELLE OBLIGATOIRE (§
+Insertion) : la nouvelle tâche s'intercale simplement dans le flux existant, sans jamais créer de gateway —
+"après Y"/"avant Y" est un repère de POSITION dans le flux, jamais un critère de décision.
+
+Exemple :
+Texte : "Un client dépose un colis. L'agent scanne le colis. L'agent expédie le colis."
+Amendement : "Ajoute une pesée du colis après le scan."
+INCORRECT : gateway exclusif "Pesée nécessaire ?" avec deux branches — aucune condition n'est exprimée dans
+le texte.
+CORRECT : Déposer → Scanner → Peser → Expédier → fin (insertion séquentielle simple, aucun gateway).
+
+Si un amendement précédent a introduit à tort un gateway sur une base non conditionnelle (erreur du type
+ci-dessus), un amendement suivant ne doit jamais construire par-dessus cette erreur (ex: dupliquer une
+tâche existante pour chaque branche du gateway erroné, créer une boucle de retour absurde vers l'une des
+branches). Il doit au contraire simplifier la structure existante dès que le sens cumulé du texte la rend
+incohérente : retirer le gateway injustifié et les branches qu'il porte, reconnecter linéairement les
+tâches concernées, en conservant les IDs des tâches réellement conservées.
+
 ## Insertion
 
 Pour :
@@ -1596,5 +1619,196 @@ Aucune explication.
 Aucune réflexion interne.
 
 Aucun commentaire.
+
+---
+
+# 27. CATALOGUE DES OPÉRATIONS D'AMENDEMENT
+
+Détail par sous-catégorie du mécanisme d'amendement incrémental (section 21) : chaque
+instruction d'amendement correspond à EXACTEMENT une des sous-catégories ci-dessous, classifiée
+avant application (étape [A] de l'architecture d'amendement, `extract_amendment_intent`). Reprend
+et détaille les patterns déjà posés en section 21 (Insertion / Ajout d'une alternative /
+Suppression) — en cas de doute, la section 21 fait foi pour le principe général, cette section
+pour le détail par sous-catégorie précise.
+
+## 27.1 Ajout
+
+**27.1.1 — Ajout d'une étape séquentielle simple**
+Déclencheur : "ajoute X après Y", "insère X avant Y", "ajoute une étape de X", SANS marqueur
+conditionnel.
+Règle : insérer le nouveau nœud en série, AUCUN gateway créé. Réutiliser l'ID du sequenceFlow
+existant entre les deux nœuds voisins pour le premier segment (changer sa cible), créer un
+nouvel ID uniquement pour le second segment.
+Piège à éviter : ne jamais transformer une insertion simple en décision conditionnelle sous
+prétexte que "après" pourrait sembler introduire une alternative — "après" décrit un ordre,
+jamais une condition, sauf si un marqueur conditionnel explicite l'accompagne.
+
+**27.1.2 — Ajout d'une étape conditionnelle (gateway exclusif)**
+Déclencheur : présence explicite de "si", "sinon", "selon que", "dans le cas où", "à condition
+que".
+Règle : créer un exclusiveGateway après le nœud d'ancrage, une branche par issue décrite, chaque
+sequenceFlow sortant nommé/conditionné.
+
+**27.1.3 — Ajout d'une étape conditionnelle non exclusive (gateway inclusif)**
+Déclencheur : au moins deux conditions énoncées indépendamment ("si concerne A... si concerne
+B..."), SANS mot de liaison exclusif entre elles, où A et B peuvent être vraies simultanément
+pour un même cas.
+Règle : générer un inclusiveGateway (jamais exclusiveGateway), refermé par un second
+inclusiveGateway de convergence avant toute tâche commune atteinte par plusieurs branches.
+Piège à éviter : ce pattern doit être détecté sur la STRUCTURE SYNTAXIQUE du texte, pas sur un
+vocabulaire métier précis déjà vu en exemple.
+
+**27.1.4 — Ajout d'une étape parallèle**
+Déclencheur : "en parallèle", "en même temps", "simultanément", "pendant que".
+Règle : parallelGateway en split, avec un parallelGateway de convergence (jamais un exclusif)
+avant la tâche commune suivante.
+
+**27.1.5 — Ajout d'un gateway basé sur événement**
+Déclencheur : "attend soit X soit Y, selon ce qui arrive en premier".
+Règle : eventBasedGateway comme point de divergence DIRECT (jamais précédé d'une tâche "attendre
+X ou Y"), suivi immédiatement par les catch events concurrents.
+
+**27.1.6 — Ajout d'un gateway complexe**
+Déclencheur : seuil de comptage ("au moins N des M critères/conditions/votes").
+Règle : complexGateway avec la condition de seuil documentée en langage naturel — jamais
+approximé par un exclusif/inclusif standard.
+
+**27.1.7 — Ajout d'une boucle (retour en arrière)**
+Déclencheur : "corrige et resoumets", "recommence", "à nouveau X", "tant que", "jusqu'à ce que".
+Règle : ajouter un sequenceFlow de retour vers le nœud EXISTANT identifié — ne jamais dupliquer
+ce nœud.
+
+**27.1.8 — Ajout d'un acteur interne (nouvelle lane)**
+Déclencheur : un rôle/service mentionné sans qualification d'externalité, ou avec une formule
+d'appartenance explicite à l'organisation déjà présente.
+Règle : créer une nouvelle lane dans la pool principale existante, jamais une pool séparée.
+
+**27.1.9 — Ajout d'un acteur externe (nouvelle pool)**
+Déclencheur : qualification explicite d'externalité ("externe", "partenaire", "fournisseur",
+"banque", "prestataire", "tiers", "sous-traitant").
+Règle : créer une nouvelle pool séparée, reliée par messageFlow — jamais par sequenceFlow direct.
+
+**27.1.10 — Ajout d'un sous-processus intégré**
+Déclencheur : "ce qui inclut...", "composé de...", une action qui se décompose en plusieurs
+sous-étapes énumérées.
+Règle : créer un subProcess contenant TOUTES les sous-étapes énumérées comme enfants directs,
+avec son propre startEvent/endEvent internes.
+
+**27.1.11 — Ajout d'une Call Activity**
+Déclencheur : "appelle le processus standard de X", réutilisation explicite ailleurs.
+Règle : un seul élément callActivity avec calledElement — jamais une pool séparée simulant
+l'appel, jamais un subProcess détaillé en double.
+
+**27.1.12 — Ajout d'un sous-processus Ad-Hoc**
+Déclencheur : "n'importe quel ordre", "selon les disponibilités", "sans ordre imposé".
+Règle : adHocSubProcess (marqueur "~"), tâches internes SANS sequenceFlow stricts — jamais un
+gateway parallèle.
+
+**27.1.13 — Ajout d'un sous-processus transactionnel**
+Déclencheur : "comme une seule opération", "si une étape échoue, annuler toutes les précédentes".
+Règle : subProcess avec isTransaction=true, cancelEndEvent interne ou boundaryEvent cancel
+attaché.
+
+**27.1.14 — Ajout d'un sous-processus événementiel**
+Déclencheur : "à tout moment pendant ce traitement, si X survient".
+Règle : subProcess avec triggeredByEvent=true, déclenché par un start event interne typé. Reste
+dans la MÊME pool que le processus qu'il interrompt.
+
+**27.1.15 — Ajout d'un événement timer**
+Déclencheur : délai exprimé en unité de temps ("après N heures/jours", "sous N").
+Règle : boundaryEvent avec eventDefinition=timer, ISO 8601. Caractère interruptif selon présence
+("sans interrompre" → non-interruptif) ou absence (interruptif par défaut) de ces marqueurs.
+Piège à éviter : ne jamais confondre avec une "escalade" générique.
+
+**27.1.16 — Ajout d'un événement de signal**
+Déclencheur : broadcast à plusieurs récepteurs potentiels.
+Règle : throw signal event + catch signal events — jamais un flux de message point-à-point. Le
+flux normal après émission continue par sequenceFlow classique dans la MÊME pool.
+
+**27.1.17 — Ajout d'un événement d'escalade**
+Déclencheur : condition métier non temporelle ("si le montant dépasse X").
+Règle : escalationEvent / escalationBoundaryEvent.
+
+**27.1.18 — Ajout d'un événement de compensation**
+Déclencheur : "annule automatiquement [action déjà effectuée] si [échec ultérieur]".
+Règle : compensationBoundaryEvent attaché à la tâche compensée + tâche isForCompensation reliée
+par association + throw compensation event dans la branche d'échec.
+
+**27.1.19 — Ajout d'un événement conditionnel**
+Déclencheur : "reste en attente jusqu'à ce que [condition] devienne vraie".
+Règle : intermediateCatchEvent eventDefinition=conditional, placé DANS le flux principal.
+
+**27.1.20 — Ajout d'un événement Terminate**
+Déclencheur : "le processus s'arrête immédiatement dans son ensemble".
+Règle : endEvent eventDefinition=terminate.
+
+**27.1.21 — Ajout d'un multi-instance**
+Déclencheur : "chacun des N fait X indépendamment" (parallèle) ou "pour chaque X, l'un après
+l'autre" (séquentiel).
+Règle : UNE SEULE tâche avec loopCharacteristics — jamais N tâches nommées distinctes reliées par
+un gateway exclusif.
+
+**27.1.22 — Ajout d'un objet de données**
+Déclencheur : "en utilisant X", "en se basant sur X", "enregistre dans X", "consulte X".
+Règle : dataObjectReference ou dataStoreReference selon la nature de X, relié par association.
+
+## 27.2 Suppression
+
+**27.2.1 — Suppression d'une tâche simple au milieu d'un flux**
+Règle : retirer le nœud et ses edges. Reconnecter DIRECTEMENT le prédécesseur au successeur, EN
+CONSERVANT LEUR ORDRE RELATIF EXACT. Ne jamais créer de boucle qui n'existait pas.
+
+**27.2.2 — Suppression d'une branche entière d'un gateway**
+Règle : retirer la branche. Si une seule branche reste, retirer aussi le gateway et reconnecter
+en séquentiel.
+
+**27.2.3 — Suppression complète d'un gateway**
+Règle : reconnexion directe prédécesseur → successeur selon 27.2.1.
+
+**27.2.4 — Suppression d'un acteur (lane ou pool)**
+Règle : réassigner ou retirer explicitement toutes les tâches de cet acteur — jamais de tâches
+orphelines sans poolId/laneId valide.
+
+**27.2.5 — Suppression d'un sous-processus**
+Règle : "remonter" les sous-étapes au niveau parent si demandé, ou tout retirer et reconnecter
+selon 27.2.1.
+
+**27.2.6 — Suppression d'un événement (timer, signal, etc.)**
+Règle : boundaryEvent -> retirer uniquement l'événement et sa branche, la tâche hôte reste
+inchangée. Événement dans le flux principal -> reconnecter selon 27.2.1.
+
+**27.2.7 — Suppression d'un objet de données**
+Règle : retirer la référence et son association, n'affecte jamais le flux de séquence.
+
+## 27.3 Modification
+
+**27.3.1 — Renommage pur**
+Règle : changer uniquement "name". ID, type, position, connexions : inchangés.
+
+**27.3.2 — Remplacement d'une tâche par une autre action**
+Déclencheur : "remplace X par Y".
+Règle : le TYPE BPMN du nouveau nœud doit être réévalué à partir de la nature de Y SEULE —
+jamais hérité du type de X. Les edges de X sont repris à l'identique.
+Piège à éviter : un remplacement successif repart de la description du nouveau remplacement à
+chaque fois, jamais de la classification précédente.
+
+**27.3.3 — Remplacement exclusif <-> inclusif**
+Règle : convertir selon que les branches deviennent ou cessent d'être mutuellement exclusives, en
+ajoutant/retirant le gateway de convergence correspondant.
+
+**27.3.4 — Changement d'acteur d'une tâche existante**
+Déclencheur : "c'est maintenant [autre acteur] qui fait X".
+Règle : changer poolId/laneId. Si changement de pool, réévaluer si les edges adjacents doivent
+devenir messageFlow (règles 27.1.9 et POOL-001).
+
+**27.3.5 — Changement de condition d'un gateway existant**
+Règle : mettre à jour uniquement "condition"/"name" des sequenceFlow sortants concernés — jamais
+recréer le gateway ni changer son ID.
+
+## 27.4 Règle transversale obligatoire
+
+Pour CHAQUE opération, le nœud/edge concerné doit être identifié par son ID RÉEL dans le
+Logic-Core fourni — jamais deviné par proximité de nom. Tout ID non explicitement visé doit
+rester strictement identique dans le résultat.
 
 Le JSON doit être directement parsable par le programme Python.

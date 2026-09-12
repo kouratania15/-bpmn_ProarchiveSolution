@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_demande_achat"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_demande_achat">
+    <bpmn:participant id="pool_entreprise" name="Entreprise" processRef="process_demande_achat" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_demande_achat" name="Entreprise" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_employe" name="Employé">
+        <bpmn:flowNodeRef>task_soumet_demande</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_manager" name="Manager">
+        <bpmn:flowNodeRef>task_approuve_demande</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_demande" name="Demande d&#x27;achat soumise">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_soumet</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_soumet_demande" name="Soumet une demande d&#x27;achat">
+      <bpmn:incoming>flow_start_soumet</bpmn:incoming>
+      <bpmn:outgoing>flow_soumet_approuve</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_approuve_demande" name="Le manager valide la demande d&#x27;achat">
+      <bpmn:incoming>flow_soumet_approuve</bpmn:incoming>
+      <bpmn:outgoing>flow_approuve_fin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_demande_approuvee" name="Demande approuvée">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_approuve_fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_soumet" name="" sourceRef="start_demande" targetRef="task_soumet_demande">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_soumet_approuve" name="" sourceRef="task_soumet_demande" targetRef="task_approuve_demande">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_approuve_fin" name="" sourceRef="task_approuve_demande" targetRef="end_demande_approuvee">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_demande_achat">
+      <bpmndi:BPMNShape id="pool_entreprise_di" bpmnElement="pool_entreprise" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="900" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_employe_di" bpmnElement="lane_employe" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_manager_di" bpmnElement="lane_manager" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_demande_di" bpmnElement="start_demande">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_soumet_demande_di" bpmnElement="task_soumet_demande">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_approuve_demande_di" bpmnElement="task_approuve_demande">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_demande_approuvee_di" bpmnElement="end_demande_approuvee">
+        <dc:Bounds x="600" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_soumet_di" bpmnElement="flow_start_soumet">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumet_approuve_di" bpmnElement="flow_soumet_approuve">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="320" />
+        <di:waypoint x="440" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_approuve_fin_di" bpmnElement="flow_approuve_fin">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="570" y="98" />
+        <di:waypoint x="600" y="98" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

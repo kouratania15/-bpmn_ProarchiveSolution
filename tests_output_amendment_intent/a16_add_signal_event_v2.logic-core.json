@@ -1,0 +1,170 @@
+{
+  "process": {
+    "id": "process_quality_service",
+    "name": "Processus de gestion des défauts qualité",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_service_qualite",
+      "name": "Service Qualité"
+    },
+    {
+      "id": "pool_production",
+      "name": "Production"
+    },
+    {
+      "id": "pool_logistique",
+      "name": "Logistique"
+    },
+    {
+      "id": "pool_ventes",
+      "name": "Ventes"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Détection d'un défaut qualité",
+      "eventDefinition": "none",
+      "poolId": "pool_service_qualite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_qualite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_diffuser_alarme",
+      "type": "task",
+      "name": "Diffuser une alerte aux services concernés",
+      "poolId": "pool_service_qualite"
+    },
+    {
+      "id": "event_throw_signal",
+      "type": "intermediateThrowEvent",
+      "name": "Diffusion d'alerte qualité",
+      "eventDefinition": "signal",
+      "eventDetail": "Alerte_Defaut_Qualite",
+      "poolId": "pool_service_qualite"
+    },
+    {
+      "id": "event_catch_signal_production",
+      "type": "intermediateCatchEvent",
+      "name": "Réception de l'alerte qualité",
+      "eventDefinition": "signal",
+      "eventDetail": "Alerte_Defaut_Qualite",
+      "poolId": "pool_production",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_production' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "event_catch_signal_logistique",
+      "type": "intermediateCatchEvent",
+      "name": "Réception de l'alerte qualité",
+      "eventDefinition": "signal",
+      "eventDetail": "Alerte_Defaut_Qualite",
+      "poolId": "pool_logistique",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_logistique' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "event_catch_signal_ventes",
+      "type": "intermediateCatchEvent",
+      "name": "Réception de l'alerte qualité",
+      "eventDefinition": "signal",
+      "eventDetail": "Alerte_Defaut_Qualite",
+      "poolId": "pool_ventes",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_ventes' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event",
+      "type": "endEvent",
+      "name": "Traitement des alertes terminé",
+      "eventDefinition": "none",
+      "poolId": "pool_production",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_production' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_production",
+      "type": "startEvent",
+      "name": "Start Production",
+      "poolId": "pool_production"
+    },
+    {
+      "id": "start_pool_logistique",
+      "type": "startEvent",
+      "name": "Start Logistique",
+      "poolId": "pool_logistique"
+    },
+    {
+      "id": "start_pool_ventes",
+      "type": "startEvent",
+      "name": "Start Ventes",
+      "poolId": "pool_ventes"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_task",
+      "source": "start_event",
+      "target": "task_diffuser_alarme",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_task_event_throw",
+      "source": "task_diffuser_alarme",
+      "target": "event_throw_signal",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_signal_production",
+      "source": "event_throw_signal",
+      "target": "event_catch_signal_production",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_signal_logistique",
+      "source": "event_throw_signal",
+      "target": "event_catch_signal_logistique",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_signal_ventes",
+      "source": "event_throw_signal",
+      "target": "event_catch_signal_ventes",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_production_end",
+      "source": "event_catch_signal_production",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_logistique_end",
+      "source": "event_catch_signal_logistique",
+      "target": "end_event",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_ventes_end",
+      "source": "event_catch_signal_ventes",
+      "target": "end_event",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_production",
+      "target": "event_catch_signal_production",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_2",
+      "source": "start_pool_logistique",
+      "target": "event_catch_signal_logistique",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_3",
+      "source": "start_pool_ventes",
+      "target": "event_catch_signal_ventes",
+      "type": "sequenceFlow"
+    }
+  ]
+}

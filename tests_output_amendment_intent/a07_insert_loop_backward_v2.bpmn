@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_publishing"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_submit_to_review" name="flow_submit_to_review" />
+  <bpmn:message id="Message_flow_submit_again_to_review" name="flow_submit_again_to_review" />
+  <bpmn:message id="Message_flow_review_to_correct_msg" name="flow_review_to_correct_msg" />
+  <bpmn:collaboration id="Collaboration_process_publishing">
+    <bpmn:participant id="author_pool" name="Auteur" processRef="author_pool_process" />
+    <bpmn:participant id="editor_pool" name="Éditeur" processRef="editor_pool_process" />
+    <bpmn:messageFlow id="flow_submit_to_review" name="" sourceRef="task_submit_article" targetRef="task_editor_review" messageRef="Message_flow_submit_to_review" />
+    <bpmn:messageFlow id="flow_submit_again_to_review" name="" sourceRef="task_submit_article_again" targetRef="task_editor_review" messageRef="Message_flow_submit_again_to_review" />
+    <bpmn:messageFlow id="flow_review_to_correct_msg" name="" sourceRef="gateway_review_errors_notify" targetRef="task_correct_article" messageRef="Message_flow_review_to_correct_msg" />
+  </bpmn:collaboration>
+  <bpmn:process id="author_pool_process" name="Auteur" isExecutable="true">
+    <bpmn:startEvent id="start_event_submission" name="Soumission de l&#x27;article">
+      <bpmn:documentation>Déclenchement du processus par la soumission de l&#x27;article par l&#x27;auteur. GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;author_pool&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_to_submit</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_submit_article" name="Soumet un article">
+      <bpmn:documentation>L&#x27;auteur soumet un article pour publication.</bpmn:documentation>
+      <bpmn:incoming>flow_start_to_submit</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:task id="task_correct_article" name="Corrige l&#x27;article">
+      <bpmn:documentation>L&#x27;auteur corrige les erreurs identifiées par l&#x27;éditeur.</bpmn:documentation>
+      <bpmn:outgoing>flow_correct_to_submit_again</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_submit_article_again" name="Resoummet l&#x27;article">
+      <bpmn:documentation>L&#x27;auteur resoummet l&#x27;article corrigé pour une nouvelle relecture.</bpmn:documentation>
+      <bpmn:incoming>flow_correct_to_submit_again</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_submit" name="" sourceRef="start_event_submission" targetRef="task_submit_article">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_correct_to_submit_again" name="" sourceRef="task_correct_article" targetRef="task_submit_article_again">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="editor_pool_process" name="Éditeur" isExecutable="true">
+    <bpmn:task id="task_editor_review" name="Relit l&#x27;article">
+      <bpmn:documentation>L&#x27;éditeur relit l&#x27;article soumis par l&#x27;auteur. GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;editor_pool&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_review_to_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_review_errors" name="Erreurs détectées ?">
+      <bpmn:incoming>flow_review_to_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_review_to_publish</bpmn:outgoing>
+      <bpmn:outgoing>flow_review_to_correct</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_publish_article" name="Publie l&#x27;article">
+      <bpmn:documentation>L&#x27;éditeur publie l&#x27;article après relecture.</bpmn:documentation>
+      <bpmn:incoming>flow_review_to_publish</bpmn:incoming>
+      <bpmn:outgoing>flow_publish_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_published" name="Article publié">
+      <bpmn:documentation>Fin du processus après publication de l&#x27;article. GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;editor_pool&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_publish_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_editor_pool" name="Start Éditeur">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="gateway_review_errors_notify" name="Transmettre : Erreurs détectées">
+      <bpmn:documentation>GAP: connexion automatique de secours — tâche relais insérée automatiquement entre le gateway &#x27;gateway_review_errors&#x27; et la pool &#x27;author_pool&#x27; : un gateway ne peut jamais porter directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_review_to_correct</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_review_to_gateway" name="" sourceRef="task_editor_review" targetRef="gateway_review_errors">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_review_to_publish" name="Pas d&#x27;erreurs" sourceRef="gateway_review_errors" targetRef="task_publish_article">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_review_to_correct" name="Erreurs détectées" sourceRef="gateway_review_errors" targetRef="gateway_review_errors_notify">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_publish_to_end" name="" sourceRef="task_publish_article" targetRef="end_event_published">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_editor_pool" targetRef="task_editor_review">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_publishing">
+      <bpmndi:BPMNShape id="author_pool_di" bpmnElement="author_pool" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1120" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="editor_pool_di" bpmnElement="editor_pool" isHorizontal="true">
+        <dc:Bounds x="60" y="390" width="896" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_submission_di" bpmnElement="start_event_submission">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_submit_article_di" bpmnElement="task_submit_article">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_editor_review_di" bpmnElement="task_editor_review">
+        <dc:Bounds x="280" y="606" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_correct_article_di" bpmnElement="task_correct_article">
+        <dc:Bounds x="760" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_submit_article_again_di" bpmnElement="task_submit_article_again">
+        <dc:Bounds x="920" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_review_errors_di" bpmnElement="gateway_review_errors">
+        <dc:Bounds x="440" y="430" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_publish_article_di" bpmnElement="task_publish_article">
+        <dc:Bounds x="600" y="430" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_published_di" bpmnElement="end_event_published">
+        <dc:Bounds x="760" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_editor_pool_di" bpmnElement="start_editor_pool">
+        <dc:Bounds x="120" y="540" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_review_errors_notify_di" bpmnElement="gateway_review_errors_notify">
+        <dc:Bounds x="600" y="606" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_submit_di" bpmnElement="flow_start_to_submit">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_review_to_gateway_di" bpmnElement="flow_review_to_gateway">
+        <di:waypoint x="380" y="646" />
+        <di:waypoint x="410" y="646" />
+        <di:waypoint x="410" y="455" />
+        <di:waypoint x="440" y="455" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_review_to_publish_di" bpmnElement="flow_review_to_publish">
+        <di:waypoint x="490" y="455" />
+        <di:waypoint x="545" y="455" />
+        <di:waypoint x="545" y="470" />
+        <di:waypoint x="600" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="450" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_review_to_correct_di" bpmnElement="flow_review_to_correct">
+        <di:waypoint x="490" y="455" />
+        <di:waypoint x="545" y="455" />
+        <di:waypoint x="545" y="646" />
+        <di:waypoint x="600" y="646" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="626" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_correct_to_submit_again_di" bpmnElement="flow_correct_to_submit_again">
+        <di:waypoint x="860" y="240" />
+        <di:waypoint x="890" y="240" />
+        <di:waypoint x="890" y="130" />
+        <di:waypoint x="920" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_publish_to_end_di" bpmnElement="flow_publish_to_end">
+        <di:waypoint x="700" y="470" />
+        <di:waypoint x="730" y="470" />
+        <di:waypoint x="730" y="448" />
+        <di:waypoint x="760" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="558" />
+        <di:waypoint x="218" y="558" />
+        <di:waypoint x="218" y="646" />
+        <di:waypoint x="280" y="646" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_submit_to_review_di" bpmnElement="flow_submit_to_review">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="706" />
+        <di:waypoint x="250" y="706" />
+        <di:waypoint x="250" y="646" />
+        <di:waypoint x="280" y="646" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_submit_again_to_review_di" bpmnElement="flow_submit_again_to_review">
+        <di:waypoint x="1020" y="130" />
+        <di:waypoint x="1050" y="130" />
+        <di:waypoint x="1050" y="706" />
+        <di:waypoint x="250" y="706" />
+        <di:waypoint x="250" y="646" />
+        <di:waypoint x="280" y="646" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_review_to_correct_msg_di" bpmnElement="flow_review_to_correct_msg">
+        <di:waypoint x="700" y="646" />
+        <di:waypoint x="730" y="646" />
+        <di:waypoint x="730" y="240" />
+        <di:waypoint x="760" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

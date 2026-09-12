@@ -1,0 +1,51 @@
+{
+  "process": {
+    "id": "Process_Processus_analyse",
+    "name": "Processus analysé",
+    "isExecutable": true
+  },
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Demande d'achat soumise",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "activity_1",
+      "type": "task",
+      "name": "soumet une demande d'achat"
+    },
+    {
+      "id": "activity_2",
+      "type": "task",
+      "name": "approuve la demande d'achat"
+    },
+    {
+      "id": "end_event",
+      "type": "endEvent",
+      "name": "Demande approuvée"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_activity_1",
+      "source": "start_event",
+      "target": "activity_1",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_2",
+      "source": "activity_1",
+      "target": "activity_2",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_3",
+      "source": "activity_2",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    }
+  ],
+  "pools": []
+}

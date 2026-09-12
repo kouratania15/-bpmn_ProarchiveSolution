@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_transfer_funds"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_client_transfer_to_bank_process" name="Demande de transfert" />
+  <bpmn:collaboration id="Collaboration_process_transfer_funds">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_bank" name="Banque" processRef="pool_bank_process" />
+    <bpmn:messageFlow id="flow_client_transfer_to_bank_process" name="Demande de transfert" sourceRef="task_client_transfer" targetRef="task_bank_process" messageRef="Message_flow_client_transfer_to_bank_process" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_transfer" name="Début du transfert">
+      <bpmn:outgoing>flow_start_to_client_transfer</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_client_transfer" name="Transférer de l&#x27;argent entre deux comptes">
+      <bpmn:incoming>flow_start_to_client_transfer</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_client_transfer" name="" sourceRef="start_transfer" targetRef="task_client_transfer">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_bank_process" name="Banque" isExecutable="true">
+    <bpmn:task id="task_bank_process" name="Traiter le transfert">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_bank&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_bank_process_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_transfer" name="Transfert traité avec succès">
+      <bpmn:incoming>flow_bank_process_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_bank" name="Start Banque">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_bank_process_to_end" name="" sourceRef="task_bank_process" targetRef="end_transfer">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_bank" targetRef="task_bank_process">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_transfer_funds">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_bank_di" bpmnElement="pool_bank" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="576" height="322" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_transfer_di" bpmnElement="start_transfer">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_client_transfer_di" bpmnElement="task_client_transfer">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_bank_process_di" bpmnElement="task_bank_process">
+        <dc:Bounds x="280" y="452" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_transfer_di" bpmnElement="end_transfer">
+        <dc:Bounds x="440" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_bank_di" bpmnElement="start_pool_bank">
+        <dc:Bounds x="120" y="386" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_client_transfer_di" bpmnElement="flow_start_to_client_transfer">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_bank_process_to_end_di" bpmnElement="flow_bank_process_to_end">
+        <di:waypoint x="380" y="492" />
+        <di:waypoint x="410" y="492" />
+        <di:waypoint x="410" y="338" />
+        <di:waypoint x="440" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="404" />
+        <di:waypoint x="218" y="404" />
+        <di:waypoint x="218" y="492" />
+        <di:waypoint x="280" y="492" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_client_transfer_to_bank_process_di" bpmnElement="flow_client_transfer_to_bank_process">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="552" />
+        <di:waypoint x="250" y="552" />
+        <di:waypoint x="250" y="492" />
+        <di:waypoint x="280" y="492" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="230" y="532" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

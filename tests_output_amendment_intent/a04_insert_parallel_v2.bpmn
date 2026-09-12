@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_recrutement"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_recrutement">
+    <bpmn:participant id="pool_recrutement" name="Processus de recrutement" processRef="process_recrutement" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_recrutement" name="Processus de recrutement" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_candidat" name="Candidat">
+        <bpmn:flowNodeRef>task_entretien</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_recruteur" name="Recruteur">
+        <bpmn:flowNodeRef>task_compte_rendu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_compte_rendu_2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_rh" name="Service RH">
+        <bpmn:flowNodeRef>task_verification_ref</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_recrutement" name="Début du processus de recrutement">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_recrutement&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_entretien</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_entretien" name="Passer un entretien">
+      <bpmn:incoming>flow_start_entretien</bpmn:incoming>
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_compte_rendu" name="Rédiger un compte-rendu">
+      <bpmn:incoming>flow_gateway_split_compte_rendu</bpmn:incoming>
+      <bpmn:outgoing>flow_compte_rendu_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_verification_ref" name="Vérifier les références du candidat">
+      <bpmn:incoming>flow_gateway_split_verification_ref</bpmn:incoming>
+      <bpmn:outgoing>flow_verification_ref_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="gateway_parallel" name="Actions parallèles">
+      <bpmn:incoming>flow_2</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_split_compte_rendu</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_split_verification_ref</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:parallelGateway id="gateway_join" name="Convergence des actions parallèles">
+      <bpmn:incoming>flow_compte_rendu_gateway</bpmn:incoming>
+      <bpmn:incoming>flow_verification_ref_gateway</bpmn:incoming>
+      <bpmn:incoming>flow_compte_rendu_gateway_task_compte_rendu_2</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_join_end</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="end_recrutement" name="Fin du processus de recrutement">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_recrutement&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_gateway_join_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:parallelGateway id="task_entretien_gw" name="task_entretien branch">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_recrutement&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_2</bpmn:outgoing>
+      <bpmn:outgoing>flow_3</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="task_compte_rendu_2" name="Rédiger un compte-rendu">
+      <bpmn:documentation>GAP: connexion automatique de secours — nœud dédoublé automatiquement : atteint depuis le gateway &#x27;task_entretien_gw&#x27;, non lié au gateway d&#x27;origine de &#x27;task_compte_rendu&#x27; — fusion erronée probable de deux mentions textuelles distinctes (cf. section 2 de SKILL.md). ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_3</bpmn:incoming>
+      <bpmn:outgoing>flow_compte_rendu_gateway_task_compte_rendu_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_entretien" name="" sourceRef="start_recrutement" targetRef="task_entretien">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_compte_rendu_gateway" name="" sourceRef="task_compte_rendu" targetRef="gateway_join">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_verification_ref_gateway" name="" sourceRef="task_verification_ref" targetRef="gateway_join">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_join_end" name="" sourceRef="gateway_join" targetRef="end_recrutement">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_split_compte_rendu" name="" sourceRef="gateway_parallel" targetRef="task_compte_rendu">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_split_verification_ref" name="" sourceRef="gateway_parallel" targetRef="task_verification_ref">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="task_entretien" targetRef="task_entretien_gw">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_2" name="" sourceRef="task_entretien_gw" targetRef="gateway_parallel">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_3" name="" sourceRef="task_entretien_gw" targetRef="task_compte_rendu_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_compte_rendu_gateway_task_compte_rendu_2" name="" sourceRef="task_compte_rendu_2" targetRef="gateway_join">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_recrutement">
+      <bpmndi:BPMNShape id="pool_recrutement_di" bpmnElement="pool_recrutement" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="980" height="680" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_candidat_di" bpmnElement="lane_candidat" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="950" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_recruteur_di" bpmnElement="lane_recruteur" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="950" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_rh_di" bpmnElement="lane_rh" isHorizontal="true">
+        <dc:Bounds x="90" y="540" width="950" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_recrutement_di" bpmnElement="start_recrutement">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_entretien_di" bpmnElement="task_entretien">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_compte_rendu_di" bpmnElement="task_compte_rendu">
+        <dc:Bounds x="760" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verification_ref_di" bpmnElement="task_verification_ref">
+        <dc:Bounds x="760" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_parallel_di" bpmnElement="gateway_parallel">
+        <dc:Bounds x="600" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_join_di" bpmnElement="gateway_join">
+        <dc:Bounds x="760" y="340" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_recrutement_di" bpmnElement="end_recrutement">
+        <dc:Bounds x="920" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_entretien_gw_di" bpmnElement="task_entretien_gw">
+        <dc:Bounds x="440" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_compte_rendu_2_di" bpmnElement="task_compte_rendu_2">
+        <dc:Bounds x="600" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_entretien_di" bpmnElement="flow_start_entretien">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_compte_rendu_gateway_di" bpmnElement="flow_compte_rendu_gateway">
+        <di:waypoint x="860" y="320" />
+        <di:waypoint x="890" y="320" />
+        <di:waypoint x="890" y="425" />
+        <di:waypoint x="730" y="425" />
+        <di:waypoint x="730" y="365" />
+        <di:waypoint x="760" y="365" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verification_ref_gateway_di" bpmnElement="flow_verification_ref_gateway">
+        <di:waypoint x="860" y="620" />
+        <di:waypoint x="890" y="620" />
+        <di:waypoint x="890" y="680" />
+        <di:waypoint x="730" y="680" />
+        <di:waypoint x="730" y="365" />
+        <di:waypoint x="760" y="365" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_join_end_di" bpmnElement="flow_gateway_join_end">
+        <di:waypoint x="810" y="365" />
+        <di:waypoint x="865" y="365" />
+        <di:waypoint x="865" y="98" />
+        <di:waypoint x="920" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_split_compte_rendu_di" bpmnElement="flow_gateway_split_compte_rendu">
+        <di:waypoint x="650" y="105" />
+        <di:waypoint x="705" y="105" />
+        <di:waypoint x="705" y="320" />
+        <di:waypoint x="760" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_split_verification_ref_di" bpmnElement="flow_gateway_split_verification_ref">
+        <di:waypoint x="650" y="105" />
+        <di:waypoint x="705" y="105" />
+        <di:waypoint x="705" y="620" />
+        <di:waypoint x="760" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="105" />
+        <di:waypoint x="440" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="600" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_3_di" bpmnElement="flow_3">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="545" y="105" />
+        <di:waypoint x="545" y="430" />
+        <di:waypoint x="600" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_compte_rendu_gateway_task_compte_rendu_2_di" bpmnElement="flow_compte_rendu_gateway_task_compte_rendu_2">
+        <di:waypoint x="700" y="430" />
+        <di:waypoint x="730" y="430" />
+        <di:waypoint x="730" y="365" />
+        <di:waypoint x="760" y="365" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reporting_problem"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_report_to_gateway" name="flow_report_to_gateway" />
+  <bpmn:collaboration id="Collaboration_process_reporting_problem">
+    <bpmn:participant id="pool_resident" name="Locataire" processRef="pool_resident_process" />
+    <bpmn:participant id="pool_syndic" name="Syndic" processRef="pool_syndic_process" />
+    <bpmn:messageFlow id="flow_report_to_gateway" name="" sourceRef="task_report_problem" targetRef="gateway_technician_type_notify" messageRef="Message_flow_report_to_gateway" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_resident_process" name="Locataire" isExecutable="true">
+    <bpmn:startEvent id="start_reporting" name="Début du processus de signalement">
+      <bpmn:outgoing>flow_start_report</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_report_problem" name="Signaler un problème dans son logement">
+      <bpmn:incoming>flow_start_report</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_report" name="" sourceRef="start_reporting" targetRef="task_report_problem">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_syndic_process" name="Syndic" isExecutable="true">
+    <bpmn:exclusiveGateway id="gateway_technician_type" name="Type de problème">
+      <bpmn:incoming>flow_report_to_gateway_seq</bpmn:incoming>
+      <bpmn:outgoing>flow_plumber</bpmn:outgoing>
+      <bpmn:outgoing>flow_electrician</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_send_plumber" name="Envoyer un plombier">
+      <bpmn:incoming>flow_plumber</bpmn:incoming>
+      <bpmn:outgoing>flow_plumber_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_send_electrician" name="Envoyer un électricien">
+      <bpmn:incoming>flow_electrician</bpmn:incoming>
+      <bpmn:outgoing>flow_electrician_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_send_technician" name="Envoyer un technicien">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_syndic&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_send_technician_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reporting" name="Signalement traité">
+      <bpmn:incoming>flow_send_technician_end</bpmn:incoming>
+      <bpmn:incoming>flow_plumber_end</bpmn:incoming>
+      <bpmn:incoming>flow_electrician_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_syndic" name="Start Syndic">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="gateway_technician_type_notify" name="Recevoir déclenchement de Locataire">
+      <bpmn:documentation>GAP: connexion automatique de secours — tâche relais insérée automatiquement entre la pool &#x27;pool_resident&#x27; et le gateway &#x27;gateway_technician_type&#x27; : un gateway ne peut jamais recevoir directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_report_to_gateway_seq</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_send_technician_end" name="" sourceRef="task_send_technician" targetRef="end_reporting">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_syndic" targetRef="task_send_technician">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_plumber" name="Plomberie" sourceRef="gateway_technician_type" targetRef="task_send_plumber">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_electrician" name="Électricité" sourceRef="gateway_technician_type" targetRef="task_send_electrician">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_plumber_end" name="" sourceRef="task_send_plumber" targetRef="end_reporting">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_electrician_end" name="" sourceRef="task_send_electrician" targetRef="end_reporting">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_report_to_gateway_seq" name="" sourceRef="gateway_technician_type_notify" targetRef="gateway_technician_type">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reporting_problem">
+      <bpmndi:BPMNShape id="pool_resident_di" bpmnElement="pool_resident" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_syndic_di" bpmnElement="pool_syndic" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="960" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reporting_di" bpmnElement="start_reporting">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_report_problem_di" bpmnElement="task_report_problem">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_technician_type_di" bpmnElement="gateway_technician_type">
+        <dc:Bounds x="600" y="320" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_send_plumber_di" bpmnElement="task_send_plumber">
+        <dc:Bounds x="760" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_send_electrician_di" bpmnElement="task_send_electrician">
+        <dc:Bounds x="760" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_send_technician_di" bpmnElement="task_send_technician">
+        <dc:Bounds x="280" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reporting_di" bpmnElement="end_reporting">
+        <dc:Bounds x="440" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_syndic_di" bpmnElement="start_pool_syndic">
+        <dc:Bounds x="120" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_technician_type_notify_di" bpmnElement="gateway_technician_type_notify">
+        <dc:Bounds x="440" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_report_di" bpmnElement="flow_start_report">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_send_technician_end_di" bpmnElement="flow_send_technician_end">
+        <di:waypoint x="380" y="536" />
+        <di:waypoint x="410" y="536" />
+        <di:waypoint x="410" y="514" />
+        <di:waypoint x="440" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="448" />
+        <di:waypoint x="218" y="448" />
+        <di:waypoint x="218" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_plumber_di" bpmnElement="flow_plumber">
+        <di:waypoint x="650" y="345" />
+        <di:waypoint x="705" y="345" />
+        <di:waypoint x="705" y="360" />
+        <di:waypoint x="760" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="340" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_electrician_di" bpmnElement="flow_electrician">
+        <di:waypoint x="650" y="345" />
+        <di:waypoint x="705" y="345" />
+        <di:waypoint x="705" y="536" />
+        <di:waypoint x="760" y="536" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="516" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_plumber_end_di" bpmnElement="flow_plumber_end">
+        <di:waypoint x="860" y="360" />
+        <di:waypoint x="890" y="360" />
+        <di:waypoint x="890" y="574" />
+        <di:waypoint x="410" y="574" />
+        <di:waypoint x="410" y="514" />
+        <di:waypoint x="440" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_electrician_end_di" bpmnElement="flow_electrician_end">
+        <di:waypoint x="860" y="536" />
+        <di:waypoint x="890" y="536" />
+        <di:waypoint x="890" y="596" />
+        <di:waypoint x="410" y="596" />
+        <di:waypoint x="410" y="514" />
+        <di:waypoint x="440" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_report_to_gateway_seq_di" bpmnElement="flow_report_to_gateway_seq">
+        <di:waypoint x="540" y="360" />
+        <di:waypoint x="570" y="360" />
+        <di:waypoint x="570" y="345" />
+        <di:waypoint x="600" y="345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_report_to_gateway_di" bpmnElement="flow_report_to_gateway">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="440" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

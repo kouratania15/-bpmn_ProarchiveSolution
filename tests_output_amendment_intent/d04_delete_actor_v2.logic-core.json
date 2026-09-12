@@ -1,0 +1,115 @@
+{
+  "process": {
+    "id": "process_reservation_chambre",
+    "name": "Réservation et préparation de chambre d'hôtel",
+    "isExecutable": true,
+    "documentation": "Processus de réservation d'une chambre d'hôtel incluant la confirmation et la préparation de la chambre par la réception."
+  },
+  "pools": [
+    {
+      "id": "pool_hotel",
+      "name": "Hôtel",
+      "lanes": [
+        {
+          "id": "lane_reception",
+          "name": "Réception"
+        },
+        {
+          "id": "lane_menage",
+          "name": "Service ménage",
+          "documentation": "Lane désactivée : la préparation de la chambre est désormais gérée par la réception."
+        }
+      ]
+    },
+    {
+      "id": "pool_client",
+      "name": "Client"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reservation",
+      "name": "Réservation client",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_reserver_chambre",
+      "name": "Réserver une chambre d'hôtel",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_confirmer_reservation",
+      "name": "Confirmer la réservation",
+      "type": "task",
+      "laneId": "lane_reception",
+      "poolId": "pool_hotel",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_hotel' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_preparer_chambre",
+      "name": "Préparer la chambre",
+      "type": "task",
+      "laneId": "lane_reception",
+      "poolId": "pool_hotel",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_reservation_finalisee",
+      "name": "Réservation finalisée et chambre prête",
+      "type": "endEvent",
+      "poolId": "pool_hotel",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_hotel",
+      "name": "Start Hôtel",
+      "type": "startEvent",
+      "poolId": "pool_hotel"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_reserver",
+      "type": "sequenceFlow",
+      "source": "start_reservation",
+      "target": "task_reserver_chambre",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_reserver_confirmer",
+      "name": "Demande de confirmation",
+      "type": "messageFlow",
+      "source": "task_reserver_chambre",
+      "target": "task_confirmer_reservation",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_confirmer_preparer",
+      "name": "Préparation de la chambre",
+      "type": "sequenceFlow",
+      "source": "task_confirmer_reservation",
+      "target": "task_preparer_chambre",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_preparer_finaliser",
+      "name": "Chambre prête",
+      "type": "sequenceFlow",
+      "source": "task_preparer_chambre",
+      "target": "end_reservation_finalisee",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_hotel",
+      "target": "task_confirmer_reservation"
+    }
+  ]
+}

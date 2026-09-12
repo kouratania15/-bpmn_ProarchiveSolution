@@ -1,0 +1,59 @@
+{
+  "process": {
+    "id": "process_organization_event",
+    "name": "Processus d'organisation d'un événement d'entreprise",
+    "documentation": "Processus d'organisation d'un événement d'entreprise incluant la préparation par l'équipe événementielle.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_equipe_evénementiel",
+      "name": "Équipe événementiel",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_organization",
+      "type": "startEvent",
+      "name": "Début de l'organisation de l'événement",
+      "eventDefinition": "none",
+      "documentation": "Déclenchement du processus d'organisation d'un événement d'entreprise. GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_equipe_evénementiel' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_equipe_evénementiel"
+    },
+    {
+      "id": "task_prepare_event",
+      "type": "task",
+      "name": "Préparer l'événement",
+      "poolId": "pool_equipe_evénementiel",
+      "documentation": "Préparation complète de l'événement incluant logistique, communication et coordination.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_event_completed",
+      "type": "endEvent",
+      "name": "Événement organisé avec succès",
+      "eventDefinition": "none",
+      "documentation": "Fin du processus après préparation complète de l'événement. GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_equipe_evénementiel' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "pool_equipe_evénementiel"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_prepare",
+      "source": "start_event_organization",
+      "target": "task_prepare_event",
+      "type": "sequenceFlow",
+      "name": "Commencer la préparation",
+      "sourceProcessElement": "sequence_flows[0]"
+    },
+    {
+      "id": "flow_prepare_to_end",
+      "source": "task_prepare_event",
+      "target": "end_event_completed",
+      "type": "sequenceFlow",
+      "name": "Événement prêt"
+    }
+  ]
+}

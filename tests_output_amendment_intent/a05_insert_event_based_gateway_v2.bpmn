@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_commande"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_passer_confirmer" name="Demande de confirmation" />
+  <bpmn:collaboration id="Collaboration_process_commande">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_systeme" name="Système" processRef="pool_systeme_process" />
+    <bpmn:messageFlow id="flow_passer_confirmer" name="Demande de confirmation" sourceRef="task_passer_commande" targetRef="task_confirmer_commande" messageRef="Message_flow_passer_confirmer" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_commande" name="Commande passée par le client">
+      <bpmn:outgoing>flow_start_commande</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_passer_commande" name="Passer une commande">
+      <bpmn:incoming>flow_start_commande</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_commande" name="" sourceRef="start_commande" targetRef="task_passer_commande">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_systeme_process" name="Système" isExecutable="true">
+    <bpmn:serviceTask id="task_confirmer_commande" name="Confirmer la commande">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_systeme&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_confirmer_gateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="end_commande_confirmee" name="Commande confirmée">
+      <bpmn:incoming>flow_paiement_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_systeme" name="Start Système">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="event_paiement_recu" name="Paiement reçu">
+      <bpmn:incoming>flow_gateway_paiement</bpmn:incoming>
+      <bpmn:outgoing>flow_paiement_end</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="event_paiement_recu_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">Paiement</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:eventBasedGateway id="gateway_attente_choix" name="Attente du choix client">
+      <bpmn:incoming>flow_confirmer_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_paiement</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_annulation</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:endEvent id="end_commande_annulee" name="Commande annulée">
+      <bpmn:incoming>flow_gateway_annulation</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_confirmer_gateway" name="" sourceRef="task_confirmer_commande" targetRef="gateway_attente_choix">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_paiement" name="" sourceRef="gateway_attente_choix" targetRef="event_paiement_recu">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_paiement_end" name="" sourceRef="event_paiement_recu" targetRef="end_commande_confirmee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_annulation" name="" sourceRef="gateway_attente_choix" targetRef="end_commande_annulee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_systeme" targetRef="task_confirmer_commande">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_commande">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_systeme_di" bpmnElement="pool_systeme" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="896" height="336" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_commande_di" bpmnElement="start_commande">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_passer_commande_di" bpmnElement="task_passer_commande">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_confirmer_commande_di" bpmnElement="task_confirmer_commande">
+        <dc:Bounds x="280" y="466" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_commande_confirmee_di" bpmnElement="end_commande_confirmee">
+        <dc:Bounds x="760" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_systeme_di" bpmnElement="start_pool_systeme">
+        <dc:Bounds x="120" y="400" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="event_paiement_recu_di" bpmnElement="event_paiement_recu">
+        <dc:Bounds x="600" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_attente_choix_di" bpmnElement="gateway_attente_choix">
+        <dc:Bounds x="440" y="320" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_commande_annulee_di" bpmnElement="end_commande_annulee">
+        <dc:Bounds x="600" y="400" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_commande_di" bpmnElement="flow_start_commande">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_confirmer_gateway_di" bpmnElement="flow_confirmer_gateway">
+        <di:waypoint x="380" y="506" />
+        <di:waypoint x="410" y="506" />
+        <di:waypoint x="410" y="345" />
+        <di:waypoint x="440" y="345" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_paiement_di" bpmnElement="flow_gateway_paiement">
+        <di:waypoint x="490" y="345" />
+        <di:waypoint x="545" y="345" />
+        <di:waypoint x="545" y="338" />
+        <di:waypoint x="600" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_paiement_end_di" bpmnElement="flow_paiement_end">
+        <di:waypoint x="636" y="338" />
+        <di:waypoint x="760" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_annulation_di" bpmnElement="flow_gateway_annulation">
+        <di:waypoint x="490" y="345" />
+        <di:waypoint x="545" y="345" />
+        <di:waypoint x="545" y="418" />
+        <di:waypoint x="600" y="418" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="418" />
+        <di:waypoint x="218" y="418" />
+        <di:waypoint x="218" y="506" />
+        <di:waypoint x="280" y="506" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_passer_confirmer_di" bpmnElement="flow_passer_confirmer">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="566" />
+        <di:waypoint x="250" y="566" />
+        <di:waypoint x="250" y="506" />
+        <di:waypoint x="280" y="506" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="230" y="546" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

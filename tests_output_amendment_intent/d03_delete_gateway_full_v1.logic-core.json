@@ -1,0 +1,129 @@
+{
+  "process": {
+    "id": "process_validation_demande_achat",
+    "name": "Processus de validation des demandes d'achat",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_entreprise",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employe",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_demande_achat",
+      "type": "startEvent",
+      "name": "Demande d'achat soumise",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_soumet_demande",
+      "type": "task",
+      "name": "Soumet une demande d'achat",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_employe",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "gateway_montant_demande",
+      "type": "exclusiveGateway",
+      "name": "Montant dépasse 1000€ ?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "gateway_1",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_manager_approuve",
+      "type": "task",
+      "name": "Manager approuve la demande",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_manager",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_validation_automatique",
+      "type": "serviceTask",
+      "name": "Validation automatique de la demande",
+      "poolId": "pool_entreprise",
+      "laneId": "lane_employe",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_demande_approuvee",
+      "type": "endEvent",
+      "name": "Demande approuvée",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_demande_validee",
+      "type": "endEvent",
+      "name": "Demande validée automatiquement",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_soumet",
+      "source": "start_demande_achat",
+      "target": "task_soumet_demande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumet_gateway",
+      "source": "task_soumet_demande",
+      "target": "gateway_montant_demande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_gateway_manager",
+      "source": "gateway_montant_demande",
+      "target": "task_manager_approuve",
+      "type": "sequenceFlow",
+      "name": "Oui",
+      "condition": "le montant dépasse 1000 euros",
+      "sourceProcessElement": "sequence_flows[0]"
+    },
+    {
+      "id": "flow_manager_end_approuvee",
+      "source": "task_manager_approuve",
+      "target": "end_demande_approuvee",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_validation_auto",
+      "source": "gateway_montant_demande",
+      "target": "task_validation_automatique",
+      "type": "sequenceFlow",
+      "name": "Non",
+      "condition": "le montant ne dépasse pas 1000 euros",
+      "sourceProcessElement": "sequence_flows[1]"
+    },
+    {
+      "id": "flow_validation_auto_end_validee",
+      "source": "task_validation_automatique",
+      "target": "end_demande_validee",
+      "type": "sequenceFlow"
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "process": {
+    "id": "process_reservation",
+    "name": "Réservation client (vol + hôtel)",
+    "documentation": "Processus de réservation d'un vol et d'un hôtel par un client via un système de réservation centralisé."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_reservation_system",
+      "name": "Système de réservation",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reservation",
+      "name": "Début de la réservation client",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_reserve_flight",
+      "name": "Réserver un vol",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_reserve_hotel",
+      "name": "Réserver un hôtel",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_process_flight",
+      "name": "Traitement de la réservation de vol",
+      "type": "serviceTask",
+      "poolId": "pool_reservation_system",
+      "documentation": "Le système valide et enregistre la réservation de vol."
+    },
+    {
+      "id": "task_process_hotel",
+      "name": "Traitement de la réservation d'hôtel",
+      "type": "serviceTask",
+      "poolId": "pool_reservation_system",
+      "documentation": "Le système valide et enregistre la réservation d'hôtel. GAP: connexion automatique de secours — rattaché automatiquement au flux principal depuis 'task_process_flight' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_reservation_success",
+      "name": "Réservations confirmées",
+      "type": "endEvent",
+      "poolId": "pool_reservation_system",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "documentation": "GAP: connexion automatique de secours — reçoit une transition de secours depuis 'task_process_hotel' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_reservation_system",
+      "name": "Start Système de réservation",
+      "type": "startEvent",
+      "poolId": "pool_reservation_system"
+    },
+    {
+      "id": "tx_reservation",
+      "type": "subProcess",
+      "name": "Transaction de réservation",
+      "isTransaction": true,
+      "poolId": "pool_reservation_system",
+      "documentation": "Sous-processus transactionnel pour gérer les réservations de vol et d'hôtel."
+    },
+    {
+      "id": "task_process_flight_tx",
+      "name": "Traitement de la réservation de vol",
+      "type": "serviceTask",
+      "parentSubProcessId": "tx_reservation",
+      "poolId": "pool_reservation_system",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_process_hotel_tx",
+      "name": "Traitement de la réservation d'hôtel",
+      "type": "serviceTask",
+      "parentSubProcessId": "tx_reservation",
+      "poolId": "pool_reservation_system",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "cancel_flight_reservation",
+      "type": "boundaryEvent",
+      "name": "Échec de la réservation d'hôtel",
+      "attachedToRef": "tx_reservation",
+      "eventDefinition": "cancel",
+      "cancelActivity": true,
+      "poolId": "pool_reservation_system"
+    },
+    {
+      "id": "task_cancel_flight",
+      "name": "Annuler la réservation du vol",
+      "type": "task",
+      "isForCompensation": true,
+      "poolId": "pool_reservation_system"
+    },
+    {
+      "id": "end_reservation_cancelled",
+      "name": "Réservation annulée (échec de l'hôtel)",
+      "type": "endEvent",
+      "eventDefinition": "none",
+      "poolId": "pool_reservation_system"
+    },
+    {
+      "id": "start_tx_reservation",
+      "name": "Début de la transaction",
+      "type": "startEvent",
+      "eventDefinition": "none",
+      "parentSubProcessId": "tx_reservation",
+      "poolId": "pool_reservation_system"
+    },
+    {
+      "id": "end_tx_reservation",
+      "name": "Fin de la transaction",
+      "type": "endEvent",
+      "eventDefinition": "none",
+      "parentSubProcessId": "tx_reservation",
+      "poolId": "pool_reservation_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_flight",
+      "type": "sequenceFlow",
+      "source": "start_reservation",
+      "target": "task_reserve_flight",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_flight_to_process_flight",
+      "type": "messageFlow",
+      "source": "task_reserve_flight",
+      "target": "task_process_flight",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_process_flight_to_hotel",
+      "type": "messageFlow",
+      "source": "task_process_flight",
+      "target": "task_reserve_hotel",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_hotel_to_process_hotel",
+      "type": "messageFlow",
+      "source": "task_reserve_hotel",
+      "target": "task_process_hotel_tx",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_process_hotel_to_end",
+      "type": "sequenceFlow",
+      "source": "task_process_hotel_tx",
+      "target": "end_tx_reservation",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_reservation_system",
+      "target": "tx_reservation"
+    },
+    {
+      "id": "flow_process_hotel_to_cancel_flight",
+      "type": "sequenceFlow",
+      "source": "cancel_flight_reservation",
+      "target": "task_cancel_flight",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_cancel_flight_to_end_cancelled",
+      "type": "sequenceFlow",
+      "source": "task_cancel_flight",
+      "target": "end_reservation_cancelled",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_2",
+      "type": "sequenceFlow",
+      "source": "start_tx_reservation",
+      "target": "task_process_flight_tx"
+    },
+    {
+      "id": "flow_3",
+      "type": "sequenceFlow",
+      "source": "task_process_flight_tx",
+      "target": "task_process_hotel_tx"
+    },
+    {
+      "id": "flow_5",
+      "type": "sequenceFlow",
+      "source": "tx_reservation",
+      "target": "end_reservation_success"
+    },
+    {
+      "id": "flow_6",
+      "source": "task_process_flight",
+      "target": "task_process_hotel",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_7",
+      "source": "task_process_hotel",
+      "target": "end_reservation_success",
+      "type": "sequenceFlow"
+    }
+  ]
+}

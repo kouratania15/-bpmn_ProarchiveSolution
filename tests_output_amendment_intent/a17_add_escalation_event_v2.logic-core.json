@@ -1,0 +1,180 @@
+{
+  "process": {
+    "id": "process_complaint_management",
+    "name": "Processus de gestion de plainte",
+    "isExecutable": true,
+    "documentation": "Processus de gestion des plaintes clients, depuis le dépôt jusqu'au traitement par le service client."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_service_client",
+      "name": "Service Client",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_complaint",
+      "name": "Plainte déposée",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_deposit_complaint",
+      "name": "Déposer une plainte",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_check_amount",
+      "name": "Vérifier le montant du litige",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "gateway_escalade",
+      "name": "Montant > 1000€ ?",
+      "type": "exclusiveGateway",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_client"
+    },
+    {
+      "id": "task_escalade",
+      "name": "Escalader au responsable régional",
+      "type": "task",
+      "poolId": "pool_service_client",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_treat_complaint",
+      "name": "Traiter la plainte",
+      "type": "task",
+      "poolId": "pool_service_client",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_service_client' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_event_complaint_handled",
+      "name": "Plainte traitée",
+      "type": "endEvent",
+      "poolId": "pool_service_client",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "end_event_escalade",
+      "name": "Plainte escaladée",
+      "type": "endEvent",
+      "poolId": "pool_service_client",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_service_client",
+      "name": "Start Service Client",
+      "type": "startEvent",
+      "poolId": "pool_service_client"
+    },
+    {
+      "id": "gateway_escalade_notify",
+      "type": "task",
+      "name": "Transmettre : Non",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — tâche relais insérée automatiquement entre le gateway 'gateway_escalade' et la pool 'pool_service_client' : un gateway ne peut jamais porter directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_escalade_notify_2",
+      "type": "task",
+      "name": "Transmettre : Oui",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — tâche relais insérée automatiquement entre le gateway 'gateway_escalade' et la pool 'pool_service_client' : un gateway ne peut jamais porter directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_deposit",
+      "type": "sequenceFlow",
+      "source": "start_event_complaint",
+      "target": "task_deposit_complaint",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_deposit_to_check",
+      "type": "sequenceFlow",
+      "source": "task_deposit_complaint",
+      "target": "task_check_amount",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_check_to_gateway",
+      "type": "sequenceFlow",
+      "source": "task_check_amount",
+      "target": "gateway_escalade",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_start_to_treat",
+      "type": "messageFlow",
+      "source": "task_deposit_complaint",
+      "target": "task_treat_complaint",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_gateway_to_treat",
+      "type": "sequenceFlow",
+      "source": "gateway_escalade",
+      "target": "gateway_escalade_notify",
+      "name": "Non",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_gateway_to_escalade",
+      "type": "sequenceFlow",
+      "source": "gateway_escalade",
+      "target": "gateway_escalade_notify_2",
+      "name": "Oui",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_escalade_to_end_escalade",
+      "type": "sequenceFlow",
+      "source": "task_escalade",
+      "target": "end_event_escalade",
+      "sourceProcessElement": "relation_007"
+    },
+    {
+      "id": "flow_treat_to_end",
+      "type": "sequenceFlow",
+      "source": "task_treat_complaint",
+      "target": "end_event_complaint_handled",
+      "sourceProcessElement": "relation_008"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_service_client",
+      "target": "task_treat_complaint"
+    },
+    {
+      "id": "flow_gateway_to_treat_msg",
+      "source": "gateway_escalade_notify",
+      "target": "task_treat_complaint",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_gateway_to_escalade_msg",
+      "source": "gateway_escalade_notify_2",
+      "target": "task_escalade",
+      "type": "messageFlow"
+    }
+  ]
+}

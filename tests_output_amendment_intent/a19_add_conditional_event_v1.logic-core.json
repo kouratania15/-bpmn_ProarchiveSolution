@@ -1,0 +1,88 @@
+{
+  "process": {
+    "id": "process_evaluation_offres",
+    "name": "Processus d'évaluation des offres",
+    "documentation": "Processus d'évaluation des offres soumises par les fournisseurs, initié par la soumission d'une offre et suivi par une évaluation par l'acheteur.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_fournisseur",
+      "name": "Fournisseur",
+      "lanes": []
+    },
+    {
+      "id": "pool_acheteur",
+      "name": "Acheteur",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_evaluation",
+      "type": "startEvent",
+      "name": "Début du processus d'évaluation des offres",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_fournisseur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_fournisseur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_submit_offer",
+      "type": "task",
+      "name": "Soumet une offre",
+      "poolId": "pool_fournisseur",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_evaluate_offer",
+      "type": "task",
+      "name": "Évalue l'offre",
+      "poolId": "pool_acheteur",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_acheteur' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_evaluation",
+      "type": "endEvent",
+      "name": "Fin de l'évaluation de l'offre",
+      "eventDefinition": "none",
+      "poolId": "pool_acheteur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_acheteur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_acheteur",
+      "type": "startEvent",
+      "name": "Start Acheteur",
+      "poolId": "pool_acheteur"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_submit",
+      "source": "start_evaluation",
+      "target": "task_submit_offer",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_evaluate",
+      "source": "task_submit_offer",
+      "target": "task_evaluate_offer",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_evaluate_end",
+      "source": "task_evaluate_offer",
+      "target": "end_evaluation",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_acheteur",
+      "target": "task_evaluate_offer",
+      "type": "sequenceFlow"
+    }
+  ]
+}

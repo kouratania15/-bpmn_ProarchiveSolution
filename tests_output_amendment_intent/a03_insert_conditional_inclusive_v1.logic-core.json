@@ -1,0 +1,85 @@
+{
+  "process": {
+    "id": "process_reporting_problem",
+    "name": "Processus de signalement d'un problème dans un logement",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_resident",
+      "name": "Locataire",
+      "lanes": []
+    },
+    {
+      "id": "pool_syndic",
+      "name": "Syndic",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reporting",
+      "type": "startEvent",
+      "name": "Début du processus de signalement",
+      "eventDefinition": "none",
+      "poolId": "pool_resident",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_report_problem",
+      "type": "task",
+      "name": "Signaler un problème dans son logement",
+      "poolId": "pool_resident",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_send_technician",
+      "type": "task",
+      "name": "Envoyer un technicien",
+      "poolId": "pool_syndic",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_syndic' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_reporting",
+      "type": "endEvent",
+      "name": "Signalement traité",
+      "eventDefinition": "none",
+      "poolId": "pool_syndic"
+    },
+    {
+      "id": "start_pool_syndic",
+      "type": "startEvent",
+      "name": "Start Syndic",
+      "poolId": "pool_syndic"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_report",
+      "source": "start_reporting",
+      "target": "task_report_problem",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_report_send_technician",
+      "source": "task_report_problem",
+      "target": "task_send_technician",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_send_technician_end",
+      "source": "task_send_technician",
+      "target": "end_reporting",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_syndic",
+      "target": "task_send_technician",
+      "type": "sequenceFlow"
+    }
+  ]
+}

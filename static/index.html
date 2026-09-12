@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPMN Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/diagram-js.css">
+<link rel="stylesheet" href="https://unpkg.com/bpmn-js@17/dist/assets/bpmn-font/css/bpmn.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">B</div>
+      <span class="app-name">BPMN Agent</span>
+      <button id="sidebar-toggle" class="panel-toggle" title="Masquer la liste des processus">&#8249;</button>
+    </div>
+    <button id="new-process-btn" class="new-process-btn"><span class="label">+ Nouveau processus</span></button>
+    <div id="process-list" class="process-list"></div>
+  </aside>
+  <button id="sidebar-expand" class="panel-expand" title="Afficher la liste des processus" hidden>&#8250;</button>
+
+  <main class="workspace">
+    <header class="workspace-header">
+      <div class="process-title-area">
+        <h1 id="process-title">Nouveau processus</h1>
+        <span id="status-badge" class="badge"></span>
+      </div>
+      <div class="workspace-actions">
+        <button id="export-btn" class="btn-secondary" disabled>Exporter .bpmn</button>
+        <button id="regenerate-btn" class="btn-primary" disabled>Régénérer</button>
+      </div>
+    </header>
+
+    <div class="workspace-body">
+      <section id="conversation-panel" class="conversation">
+        <div class="conversation-toolbar">
+          <span class="conversation-toolbar-label">Conversation</span>
+          <button id="conversation-toggle" class="panel-toggle" title="Masquer la conversation">&#8249;</button>
+        </div>
+        <div id="conversation-list" class="conversation-list">
+          <p class="conversation-empty">Décrivez un processus métier pour générer votre premier diagramme BPMN.</p>
+        </div>
+        <form id="message-form" class="message-form">
+          <input id="message-input" type="text" placeholder="Décrivez le processus ou une modification..." autocomplete="off">
+          <button type="submit">Envoyer</button>
+        </form>
+      </section>
+      <button id="conversation-expand" class="panel-expand" title="Afficher la conversation" hidden>&#8250;</button>
+
+      <section class="canvas-panel">
+        <div id="canvas" class="bpmn-canvas"></div>
+        <div id="canvas-empty" class="canvas-empty">Aucun diagramme à afficher pour l'instant</div>
+      </section>
+    </div>
+  </main>
+
+</div>
+
+<script src="https://unpkg.com/bpmn-js@17/dist/bpmn-viewer.production.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{
+  "process": {
+    "id": "process_support_ticket",
+    "name": "Processus de gestion de ticket de support",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_support",
+      "name": "Service Support",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_ticket_submitted",
+      "type": "startEvent",
+      "name": "Ticket soumis",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_support",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_support' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_submit_ticket",
+      "type": "task",
+      "name": "Soumet un ticket de support",
+      "poolId": "pool_support",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_reply_ticket",
+      "type": "task",
+      "name": "Répond au ticket",
+      "poolId": "pool_support",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_ticket_resolved",
+      "type": "endEvent",
+      "name": "Ticket résolu",
+      "eventDefinition": "none",
+      "poolId": "pool_support",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_support' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "source": "start_ticket_submitted",
+      "target": "task_submit_ticket",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_reply",
+      "source": "task_submit_ticket",
+      "target": "task_reply_ticket",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_reply_to_end",
+      "source": "task_reply_ticket",
+      "target": "end_ticket_resolved",
+      "type": "sequenceFlow"
+    }
+  ]
+}

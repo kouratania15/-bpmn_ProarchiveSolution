@@ -1,0 +1,123 @@
+{
+  "process": {
+    "id": "process_order_client",
+    "name": "Processus de commande client",
+    "documentation": "Un client commande un produit. Le système envoie un email et un SMS de confirmation avant d'expédier la commande.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_system",
+      "name": "Système",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_order",
+      "type": "startEvent",
+      "name": "Début de la commande client",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_order",
+      "type": "task",
+      "name": "Commande un produit",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_send_email",
+      "type": "sendTask",
+      "name": "Envoie un email de confirmation",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_system' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_send_sms",
+      "type": "sendTask",
+      "name": "Envoie un SMS de confirmation",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_shipping_order",
+      "type": "task",
+      "name": "Expédie la commande",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_order",
+      "type": "endEvent",
+      "name": "Commande expédiée",
+      "eventDefinition": "none",
+      "poolId": "pool_system"
+    },
+    {
+      "id": "start_pool_system",
+      "type": "startEvent",
+      "name": "Start Système",
+      "poolId": "pool_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_order",
+      "source": "start_order",
+      "target": "task_client_order",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_order_email",
+      "source": "task_client_order",
+      "target": "task_send_email",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_order_sms",
+      "source": "task_client_order",
+      "target": "task_send_sms",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_email_shipping",
+      "source": "task_send_email",
+      "target": "task_shipping_order",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_sms_shipping",
+      "source": "task_send_sms",
+      "target": "task_shipping_order",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_shipping_end",
+      "source": "task_shipping_order",
+      "target": "end_order",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_system",
+      "target": "task_send_email",
+      "type": "sequenceFlow"
+    }
+  ]
+}

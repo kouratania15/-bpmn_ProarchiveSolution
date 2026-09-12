@@ -1,0 +1,143 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "isExecutable": true,
+    "documentation": "Processus de recrutement où un candidat postule à une offre d'emploi, suivi d'une évaluation du CV par le recruteur et de décisions conditionnelles menant à différentes actions (entretien ou réponse négative)."
+  },
+  "pools": [
+    {
+      "id": "pool_recruteur",
+      "name": "Entreprise (Recruteur)",
+      "lanes": []
+    },
+    {
+      "id": "pool_candidat",
+      "name": "Candidat"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "name": "Postulation reçue",
+      "type": "startEvent",
+      "poolId": "pool_candidat",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_postuler",
+      "name": "Postuler à une offre d'emploi",
+      "type": "task",
+      "poolId": "pool_candidat",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_examiner_cv",
+      "name": "Examiner le CV",
+      "type": "task",
+      "poolId": "pool_recruteur",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_recruteur' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_decision_profil",
+      "name": "Correspondance du profil",
+      "type": "exclusiveGateway",
+      "poolId": "pool_recruteur",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "gateway_1"
+    },
+    {
+      "id": "task_planifier_entretien",
+      "name": "Planifier un entretien",
+      "type": "task",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_envoyer_reponse_neg",
+      "name": "Envoyer une réponse négative",
+      "type": "task",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_entretien_planifie",
+      "name": "Entretien planifié",
+      "type": "endEvent",
+      "poolId": "pool_recruteur",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "end_reponse_negative",
+      "name": "Réponse négative envoyée",
+      "type": "endEvent",
+      "poolId": "pool_recruteur",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_recruteur",
+      "name": "Start Entreprise (Recruteur)",
+      "type": "startEvent",
+      "poolId": "pool_recruteur"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_postuler",
+      "type": "sequenceFlow",
+      "source": "start_recrutement",
+      "target": "task_postuler",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_postuler_examiner_cv",
+      "type": "messageFlow",
+      "source": "task_postuler",
+      "target": "task_examiner_cv",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_examiner_cv_decision",
+      "type": "sequenceFlow",
+      "source": "task_examiner_cv",
+      "target": "gateway_decision_profil",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_decision_perfect_match",
+      "name": "Profil correspond parfaitement",
+      "type": "sequenceFlow",
+      "source": "gateway_decision_profil",
+      "target": "task_planifier_entretien",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_planifier_entretien_end",
+      "type": "sequenceFlow",
+      "source": "task_planifier_entretien",
+      "target": "end_entretien_planifie"
+    },
+    {
+      "id": "flow_decision_no_match",
+      "name": "Profil ne correspond pas du tout",
+      "type": "sequenceFlow",
+      "source": "gateway_decision_profil",
+      "target": "task_envoyer_reponse_neg",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_reponse_neg_end",
+      "type": "sequenceFlow",
+      "source": "task_envoyer_reponse_neg",
+      "target": "end_reponse_negative"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_recruteur",
+      "target": "task_examiner_cv"
+    }
+  ]
+}

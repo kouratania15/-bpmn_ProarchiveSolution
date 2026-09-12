@@ -1,8 +1,28 @@
 """
 Système de traces terminal pour l'observabilité du pipeline.
 """
+import builtins
 import sys
 from typing import Optional
+
+
+def print(*args, **kwargs):
+    """Remplace le print() du module : une trace console est cosmétique, elle
+    ne doit jamais faire planter la vraie logique métier qui l'entoure à
+    cause d'un caractère (€, ≤, etc. généré par le LLM) hors du codepage de
+    la console (ex: cp1252 sous Windows, notamment via uvicorn --reload dont
+    le sous-processus n'hérite pas toujours d'un sys.stdout.reconfigure()
+    fait au niveau du process principal)."""
+    try:
+        builtins.print(*args, **kwargs)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        safe_args = [
+            a.encode(encoding, errors="replace").decode(encoding, errors="replace") if isinstance(a, str) else a
+            for a in args
+        ]
+        builtins.print(*safe_args, **kwargs)
+
 
 # Configuration globale
 TRACE_ENABLED = True

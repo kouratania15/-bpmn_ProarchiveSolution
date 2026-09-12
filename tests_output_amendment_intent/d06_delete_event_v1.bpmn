@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_support_ticket"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_support_ticket">
+    <bpmn:participant id="pool_company" name="Entreprise (Service Support)" processRef="process_support_ticket" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_support_ticket" name="Entreprise (Service Support)" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_client" name="Client">
+        <bpmn:flowNodeRef>start_event_submit_ticket</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_submit_ticket</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_agent" name="Agent Support">
+        <bpmn:flowNodeRef>task_agent_response</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>timer_event_timeout</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>end_event_ticket_resolved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_agent_response_split_gw</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_responsable" name="Responsable Support">
+        <bpmn:flowNodeRef>task_transfer_to_manager</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>end_event_ticket_escalated</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_event_submit_ticket" name="Ticket soumis">
+      <bpmn:outgoing>flow_start_to_submit</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_submit_ticket" name="Soumettre un ticket de support">
+      <bpmn:incoming>flow_start_to_submit</bpmn:incoming>
+      <bpmn:outgoing>flow_submit_to_agent</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_agent_response" name="Répondre au ticket">
+      <bpmn:documentation>Répondre au ticket de support.</bpmn:documentation>
+      <bpmn:incoming>flow_submit_to_agent</bpmn:incoming>
+      <bpmn:outgoing>flow_agent_to_gw</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="timer_event_timeout" name="Délai de réponse dépassé (24h)">
+      <bpmn:incoming>flow_agent_to_timer</bpmn:incoming>
+      <bpmn:outgoing>flow_timer_to_transfer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="timer_event_timeout_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT24H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="task_transfer_to_manager" name="Transférer le ticket au responsable">
+      <bpmn:incoming>flow_timer_to_transfer</bpmn:incoming>
+      <bpmn:outgoing>flow_transfer_to_escalated</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_ticket_resolved" name="Ticket résolu">
+      <bpmn:incoming>flow_agent_to_resolved</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_event_ticket_escalated" name="Ticket escaladé au responsable">
+      <bpmn:incoming>flow_transfer_to_escalated</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="task_agent_response_split_gw" name="Réponse envoyée ou délai dépassé ?">
+      <bpmn:incoming>flow_agent_to_gw</bpmn:incoming>
+      <bpmn:outgoing>flow_agent_to_timer</bpmn:outgoing>
+      <bpmn:outgoing>flow_agent_to_resolved</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="flow_start_to_submit" name="" sourceRef="start_event_submit_ticket" targetRef="task_submit_ticket">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_submit_to_agent" name="" sourceRef="task_submit_ticket" targetRef="task_agent_response">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_agent_to_gw" name="" sourceRef="task_agent_response" targetRef="task_agent_response_split_gw">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_agent_to_timer" name="Délai dépassé" sourceRef="task_agent_response_split_gw" targetRef="timer_event_timeout">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_timer_to_transfer" name="" sourceRef="timer_event_timeout" targetRef="task_transfer_to_manager">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_agent_to_resolved" name="Réponse envoyée" sourceRef="task_agent_response_split_gw" targetRef="end_event_ticket_resolved">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_transfer_to_escalated" name="" sourceRef="task_transfer_to_manager" targetRef="end_event_ticket_escalated">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_support_ticket">
+      <bpmndi:BPMNShape id="pool_company_di" bpmnElement="pool_company" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1236" height="636" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_client_di" bpmnElement="lane_client" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="1206" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_agent_di" bpmnElement="lane_agent" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="1206" height="256" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_responsable_di" bpmnElement="lane_responsable" isHorizontal="true">
+        <dc:Bounds x="90" y="496" width="1206" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_submit_ticket_di" bpmnElement="start_event_submit_ticket">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_submit_ticket_di" bpmnElement="task_submit_ticket">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_agent_response_di" bpmnElement="task_agent_response">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="timer_event_timeout_di" bpmnElement="timer_event_timeout">
+        <dc:Bounds x="760" y="280" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_transfer_to_manager_di" bpmnElement="task_transfer_to_manager">
+        <dc:Bounds x="920" y="536" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_ticket_resolved_di" bpmnElement="end_event_ticket_resolved">
+        <dc:Bounds x="760" y="390" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_ticket_escalated_di" bpmnElement="end_event_ticket_escalated">
+        <dc:Bounds x="1080" y="536" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_agent_response_split_gw_di" bpmnElement="task_agent_response_split_gw">
+        <dc:Bounds x="600" y="280" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_submit_di" bpmnElement="flow_start_to_submit">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_submit_to_agent_di" bpmnElement="flow_submit_to_agent">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="320" />
+        <di:waypoint x="440" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_agent_to_gw_di" bpmnElement="flow_agent_to_gw">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="570" y="305" />
+        <di:waypoint x="600" y="305" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_agent_to_timer_di" bpmnElement="flow_agent_to_timer">
+        <di:waypoint x="650" y="305" />
+        <di:waypoint x="705" y="305" />
+        <di:waypoint x="705" y="298" />
+        <di:waypoint x="760" y="298" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="278" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_timer_to_transfer_di" bpmnElement="flow_timer_to_transfer">
+        <di:waypoint x="796" y="298" />
+        <di:waypoint x="858" y="298" />
+        <di:waypoint x="858" y="576" />
+        <di:waypoint x="920" y="576" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_agent_to_resolved_di" bpmnElement="flow_agent_to_resolved">
+        <di:waypoint x="650" y="305" />
+        <di:waypoint x="705" y="305" />
+        <di:waypoint x="705" y="408" />
+        <di:waypoint x="760" y="408" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="685" y="388" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_transfer_to_escalated_di" bpmnElement="flow_transfer_to_escalated">
+        <di:waypoint x="1020" y="576" />
+        <di:waypoint x="1050" y="576" />
+        <di:waypoint x="1050" y="554" />
+        <di:waypoint x="1080" y="554" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

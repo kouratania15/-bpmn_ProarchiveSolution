@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_expense_management"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_expense_management">
+    <bpmn:participant id="pool_company" name="Entreprise" processRef="process_expense_management" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_expense_management" name="Entreprise" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_employee" name="Employé">
+        <bpmn:flowNodeRef>task_submit_expense</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_manager" name="Manager">
+        <bpmn:flowNodeRef>task_approve_expense</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_financial_director" name="Directeur financier">
+        <bpmn:flowNodeRef>task_get_financial_approval</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_expense_process" name="Début du processus de gestion de note de frais">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_company&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_submit</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_submit_expense" name="Soumet une note de frais">
+      <bpmn:incoming>flow_start_submit</bpmn:incoming>
+      <bpmn:outgoing>flow_submit_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_approve_expense" name="Approuve la note de frais">
+      <bpmn:incoming>flow_gateway_approve</bpmn:incoming>
+      <bpmn:incoming>flow_financial_approval_approve</bpmn:incoming>
+      <bpmn:outgoing>flow_approve_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_montant_depasse_500" name="Montant dépasse 500€ ?">
+      <bpmn:incoming>flow_submit_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_approve</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_financial_approval</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_get_financial_approval" name="Obtient l&#x27;accord du directeur financier">
+      <bpmn:incoming>flow_gateway_financial_approval</bpmn:incoming>
+      <bpmn:outgoing>flow_financial_approval_approve</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_expense_approved" name="Note de frais approuvée">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_company&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_approve_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_submit" name="" sourceRef="start_expense_process" targetRef="task_submit_expense">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_submit_gateway" name="" sourceRef="task_submit_expense" targetRef="gateway_montant_depasse_500">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_approve_end" name="" sourceRef="task_approve_expense" targetRef="end_expense_approved">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_approve" name="Montant ≤ 500€" sourceRef="gateway_montant_depasse_500" targetRef="task_approve_expense">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_financial_approval" name="Montant &gt; 500€" sourceRef="gateway_montant_depasse_500" targetRef="task_get_financial_approval">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_financial_approval_approve" name="" sourceRef="task_get_financial_approval" targetRef="task_approve_expense">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_expense_management">
+      <bpmndi:BPMNShape id="pool_company_di" bpmnElement="pool_company" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="900" height="570" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_employee_di" bpmnElement="lane_employee" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_manager_di" bpmnElement="lane_manager" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_financial_director_di" bpmnElement="lane_financial_director" isHorizontal="true">
+        <dc:Bounds x="90" y="430" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_expense_process_di" bpmnElement="start_expense_process">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_submit_expense_di" bpmnElement="task_submit_expense">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_approve_expense_di" bpmnElement="task_approve_expense">
+        <dc:Bounds x="600" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_montant_depasse_500_di" bpmnElement="gateway_montant_depasse_500">
+        <dc:Bounds x="440" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_get_financial_approval_di" bpmnElement="task_get_financial_approval">
+        <dc:Bounds x="600" y="470" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_expense_approved_di" bpmnElement="end_expense_approved">
+        <dc:Bounds x="760" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_submit_di" bpmnElement="flow_start_submit">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_submit_gateway_di" bpmnElement="flow_submit_gateway">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="105" />
+        <di:waypoint x="440" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_approve_end_di" bpmnElement="flow_approve_end">
+        <di:waypoint x="700" y="320" />
+        <di:waypoint x="730" y="320" />
+        <di:waypoint x="730" y="98" />
+        <di:waypoint x="760" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_approve_di" bpmnElement="flow_gateway_approve">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="545" y="105" />
+        <di:waypoint x="545" y="320" />
+        <di:waypoint x="600" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="300" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_financial_approval_di" bpmnElement="flow_gateway_financial_approval">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="545" y="105" />
+        <di:waypoint x="545" y="510" />
+        <di:waypoint x="600" y="510" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="490" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_financial_approval_approve_di" bpmnElement="flow_financial_approval_approve">
+        <di:waypoint x="700" y="510" />
+        <di:waypoint x="730" y="510" />
+        <di:waypoint x="730" y="570" />
+        <di:waypoint x="570" y="570" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="600" y="320" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

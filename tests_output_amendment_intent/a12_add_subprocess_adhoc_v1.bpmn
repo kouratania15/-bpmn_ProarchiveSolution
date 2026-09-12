@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_organization_event"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_organization_event">
+    <bpmn:participant id="pool_equipe_evénementiel" name="Équipe événementiel" processRef="process_organization_event" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_organization_event" name="Équipe événementiel" isExecutable="true">
+    <bpmn:startEvent id="start_event_organization" name="Début de l&#x27;organisation de l&#x27;événement">
+      <bpmn:documentation>Déclenchement du processus d&#x27;organisation d&#x27;un événement d&#x27;entreprise. GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_equipe_evénementiel&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_to_prepare</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_prepare_event" name="Préparer l&#x27;événement">
+      <bpmn:documentation>Préparation complète de l&#x27;événement incluant logistique, communication et coordination.</bpmn:documentation>
+      <bpmn:incoming>flow_start_to_prepare</bpmn:incoming>
+      <bpmn:outgoing>flow_prepare_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_completed" name="Événement organisé avec succès">
+      <bpmn:documentation>Fin du processus après préparation complète de l&#x27;événement. GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_equipe_evénementiel&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_prepare_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_to_prepare" name="Commencer la préparation" sourceRef="start_event_organization" targetRef="task_prepare_event">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_prepare_to_end" name="Événement prêt" sourceRef="task_prepare_event" targetRef="end_event_completed">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_organization_event">
+      <bpmndi:BPMNShape id="pool_equipe_evénementiel_di" bpmnElement="pool_equipe_evénementiel" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="576" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_organization_di" bpmnElement="start_event_organization">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_prepare_event_di" bpmnElement="task_prepare_event">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_completed_di" bpmnElement="end_event_completed">
+        <dc:Bounds x="440" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_prepare_di" bpmnElement="flow_start_to_prepare">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="198" y="110" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_prepare_to_end_di" bpmnElement="flow_prepare_to_end">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="108" />
+        <di:waypoint x="440" y="108" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="88" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

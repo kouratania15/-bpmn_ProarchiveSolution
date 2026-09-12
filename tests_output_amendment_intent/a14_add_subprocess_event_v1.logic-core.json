@@ -1,0 +1,69 @@
+{
+  "process": {
+    "id": "process_livraison_colis",
+    "name": "Processus de livraison du colis",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_transporteur",
+      "name": "Transporteur",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_livraison",
+      "type": "startEvent",
+      "name": "Début de la livraison du colis",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_1",
+      "poolId": "pool_transporteur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_transporteur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_colis_en_cours",
+      "type": "task",
+      "name": "Colis en cours de livraison",
+      "sourceProcessElement": "activity_1",
+      "poolId": "pool_transporteur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_transporteur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_livraison_transporteur",
+      "type": "task",
+      "name": "Livraison du colis par le transporteur",
+      "poolId": "pool_transporteur",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_livraison_terminee",
+      "type": "endEvent",
+      "name": "Livraison du colis terminée",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_2",
+      "poolId": "pool_transporteur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_transporteur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_colis",
+      "source": "start_livraison",
+      "target": "task_colis_en_cours",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_colis_livraison",
+      "source": "task_colis_en_cours",
+      "target": "task_livraison_transporteur",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_livraison_end",
+      "source": "task_livraison_transporteur",
+      "target": "end_livraison_terminee",
+      "type": "sequenceFlow"
+    }
+  ]
+}

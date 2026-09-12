@@ -1,0 +1,70 @@
+{
+  "process": {
+    "id": "process_evaluation",
+    "name": "Processus d'évaluation de projet",
+    "documentation": "Processus d'évaluation d'un projet soumis par un comité.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_comite",
+      "name": "Comité d'évaluation",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Début du processus d'évaluation",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_comite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_submit_project",
+      "type": "task",
+      "name": "Projet soumis pour évaluation",
+      "poolId": "pool_comite",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_evaluate_project",
+      "type": "task",
+      "name": "Comité examine le projet",
+      "poolId": "pool_comite",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_event",
+      "type": "endEvent",
+      "name": "Évaluation terminée",
+      "eventDefinition": "none",
+      "documentation": "Fin du processus d'évaluation GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "pool_comite"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "source": "start_event",
+      "target": "task_submit_project",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "sequence_flows[0]"
+    },
+    {
+      "id": "flow_submit_to_evaluate",
+      "source": "task_submit_project",
+      "target": "task_evaluate_project",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "sequence_flows[1]"
+    },
+    {
+      "id": "flow_evaluate_to_end",
+      "source": "task_evaluate_project",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    }
+  ]
+}

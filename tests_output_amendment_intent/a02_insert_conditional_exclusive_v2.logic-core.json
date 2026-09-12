@@ -1,0 +1,117 @@
+{
+  "process": {
+    "id": "process_expense_management",
+    "name": "Processus de gestion de note de frais",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employee",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        },
+        {
+          "id": "lane_financial_director",
+          "name": "Directeur financier"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_expense_process",
+      "name": "Début du processus de gestion de note de frais",
+      "type": "startEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_expense",
+      "name": "Soumet une note de frais",
+      "type": "task",
+      "laneId": "lane_employee",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_approve_expense",
+      "name": "Approuve la note de frais",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_montant_depasse_500",
+      "type": "exclusiveGateway",
+      "name": "Montant dépasse 500€ ?",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_get_financial_approval",
+      "name": "Obtient l'accord du directeur financier",
+      "type": "task",
+      "laneId": "lane_financial_director",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "end_expense_approved",
+      "name": "Note de frais approuvée",
+      "type": "endEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_submit",
+      "type": "sequenceFlow",
+      "source": "start_expense_process",
+      "target": "task_submit_expense",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "flow_submit_gateway",
+      "type": "sequenceFlow",
+      "source": "task_submit_expense",
+      "target": "gateway_montant_depasse_500"
+    },
+    {
+      "id": "flow_approve_end",
+      "type": "sequenceFlow",
+      "source": "task_approve_expense",
+      "target": "end_expense_approved"
+    },
+    {
+      "id": "flow_gateway_approve",
+      "type": "sequenceFlow",
+      "source": "gateway_montant_depasse_500",
+      "target": "task_approve_expense",
+      "name": "Montant ≤ 500€"
+    },
+    {
+      "id": "flow_gateway_financial_approval",
+      "type": "sequenceFlow",
+      "source": "gateway_montant_depasse_500",
+      "target": "task_get_financial_approval",
+      "name": "Montant > 500€"
+    },
+    {
+      "id": "flow_financial_approval_approve",
+      "type": "sequenceFlow",
+      "source": "task_get_financial_approval",
+      "target": "task_approve_expense"
+    }
+  ]
+}

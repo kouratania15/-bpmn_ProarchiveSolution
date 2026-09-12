@@ -1,0 +1,90 @@
+{
+  "process": {
+    "id": "process_reservation_chambre",
+    "name": "Réservation et confirmation de chambre d'hôtel",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_reception",
+      "name": "Réception",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reservation",
+      "type": "startEvent",
+      "name": "Demande de réservation",
+      "eventDefinition": "none",
+      "sourceProcessElement": "demande_reservation",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_client' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_reserver_chambre",
+      "type": "manualTask",
+      "name": "Réserver une chambre",
+      "poolId": "pool_client",
+      "sourceProcessElement": "reserver_chambre"
+    },
+    {
+      "id": "task_confirmer_reservation",
+      "type": "manualTask",
+      "name": "Confirmer la réservation",
+      "poolId": "pool_reception",
+      "sourceProcessElement": "confirmer_reservation",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_reception' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_reservation_confirme",
+      "type": "endEvent",
+      "name": "Réservation confirmée",
+      "eventDefinition": "none",
+      "sourceProcessElement": "reservation_confirme",
+      "poolId": "pool_reception",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_reception' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_reception",
+      "type": "startEvent",
+      "name": "Start Réception",
+      "poolId": "pool_reception"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_reservation",
+      "source": "start_reservation",
+      "target": "task_reserver_chambre",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_demande_confirmation"
+    },
+    {
+      "id": "flow_reserver_confirmer",
+      "source": "task_reserver_chambre",
+      "target": "task_confirmer_reservation",
+      "type": "messageFlow",
+      "name": "Demande de confirmation",
+      "sourceProcessElement": "relation_reservation_confirmation"
+    },
+    {
+      "id": "flow_confirmer_end",
+      "source": "task_confirmer_reservation",
+      "target": "end_reservation_confirme",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_demande_confirmation"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_reception",
+      "target": "task_confirmer_reservation",
+      "type": "sequenceFlow"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "process": {
+    "id": "process_complaint_management",
+    "name": "Processus de gestion de plainte",
+    "documentation": "Processus de gestion des plaintes clients, depuis le dépôt jusqu'au traitement par le service client.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_service_client",
+      "name": "Service Client",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_complaint",
+      "type": "startEvent",
+      "name": "Plainte déposée",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_deposit_complaint",
+      "type": "task",
+      "name": "Déposer une plainte",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_treat_complaint",
+      "type": "task",
+      "name": "Traiter la plainte",
+      "poolId": "pool_service_client",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_service_client' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_complaint_handled",
+      "type": "endEvent",
+      "name": "Plainte traitée",
+      "eventDefinition": "none",
+      "poolId": "pool_service_client"
+    },
+    {
+      "id": "start_pool_service_client",
+      "type": "startEvent",
+      "name": "Start Service Client",
+      "poolId": "pool_service_client"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_deposit",
+      "source": "start_event_complaint",
+      "target": "task_deposit_complaint",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_deposit_to_treat",
+      "source": "task_deposit_complaint",
+      "target": "task_treat_complaint",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_treat_to_end",
+      "source": "task_treat_complaint",
+      "target": "end_event_complaint_handled",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_service_client",
+      "target": "task_treat_complaint",
+      "type": "sequenceFlow"
+    }
+  ]
+}

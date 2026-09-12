@@ -1013,17 +1013,13 @@ _LOOP_TEXT_KEYWORDS_RE = re.compile(
 )
 
 
-def _check_unjustified_backward_loop(logic_core: dict[str, Any], source_text: str | None) -> list[str]:
-    """AVERTISSEMENT (non bloquant) — BUG 8 de rapport_tests_v2.md : une boucle
-    arrière (cycle détecté dans le graphe sequenceFlow) sans aucun mot-clé de
-    répétition dans le texte source est un signal fiable d'un câblage erroné
-    (retour vers une étape déjà passée sans preuve textuelle), pas d'une vraie
-    boucle métier (cf. règle 15.5 de SKILL.md). Détection par un vrai algorithme
-    de cycle sur le graphe orienté, pas par un ordre de création des nœuds."""
-    if source_text and _LOOP_TEXT_KEYWORDS_RE.search(source_text):
-        return []
-    nodes = logic_core.get("nodes", []) if isinstance(logic_core, dict) else []
-    edges = logic_core.get("edges", []) if isinstance(logic_core, dict) else []
+def _detect_backward_edges(nodes: list[Any], edges: list[Any]) -> list[tuple[str, str]]:
+    """Détecte les back-edges (cycles) d'un graphe sequenceFlow par un vrai algorithme de
+    parcours (DFS 3 couleurs), pas par un ordre de création des nœuds. Extrait de
+    _check_unjustified_backward_loop pour être réutilisé tel quel par
+    _check_amendment_no_new_cycle_on_delete (validate_amendment_diff, étape [D]) : les deux
+    fonctions doivent compter les cycles de la même façon, sinon une régression dans l'une
+    pourrait passer inaperçue de l'autre."""
     adj: dict[str, list[str]] = {}
     for e in edges:
         if not isinstance(e, dict) or e.get("type") not in ("sequenceFlow", None):
@@ -1048,6 +1044,21 @@ def _check_unjustified_backward_loop(logic_core: dict[str, Any], source_text: st
     for nid in list(color):
         if color.get(nid) == WHITE:
             dfs(nid)
+    return back_edges
+
+
+def _check_unjustified_backward_loop(logic_core: dict[str, Any], source_text: str | None) -> list[str]:
+    """AVERTISSEMENT (non bloquant) — BUG 8 de rapport_tests_v2.md : une boucle
+    arrière (cycle détecté dans le graphe sequenceFlow) sans aucun mot-clé de
+    répétition dans le texte source est un signal fiable d'un câblage erroné
+    (retour vers une étape déjà passée sans preuve textuelle), pas d'une vraie
+    boucle métier (cf. règle 15.5 de SKILL.md). Détection par un vrai algorithme
+    de cycle sur le graphe orienté, pas par un ordre de création des nœuds."""
+    if source_text and _LOOP_TEXT_KEYWORDS_RE.search(source_text):
+        return []
+    nodes = logic_core.get("nodes", []) if isinstance(logic_core, dict) else []
+    edges = logic_core.get("edges", []) if isinstance(logic_core, dict) else []
+    back_edges = _detect_backward_edges(nodes, edges)
 
     if not back_edges:
         return []
@@ -1055,6 +1066,252 @@ def _check_unjustified_backward_loop(logic_core: dict[str, Any], source_text: st
         f"Boucle arrière détectée dans le graphe ({', '.join(f'{s}->{t}' for s, t in back_edges)}) sans aucun "
         "mot-clé de répétition dans le texte source ('tant que', 'jusqu'à ce que', 'à nouveau'...) : vérifier "
         "qu'il ne s'agit pas d'un câblage erroné vers une étape déjà passée (cf. règle 15.5 de SKILL.md)."
+    ]
+
+
+# ----------------------------------------------------------------------
+# Étape [D] de l'architecture d'amendement : validate_amendment_diff
+#
+# Compare l'ancien Logic-Core, le nouveau, et l'intention déclarée par
+# extract_amendment_intent (étape [A], scripts/llm_agent.py) pour détecter les
+# écarts entre ce qui a été DEMANDÉ et ce qui a été RÉELLEMENT produit — un
+# contrôle sémantique du diff, en complément des règles de soundness BPMN
+# génériques déjà vérifiées par validate_logic_core (étape [C], inchangée).
+# Appelée séparément par pipeline.py (pas insérée dans validate_logic_core, qui
+# ne reçoit ni l'ancien graphe ni l'intention).
+# ----------------------------------------------------------------------
+
+def _amendment_node_ids(logic_core: dict[str, Any]) -> set[str]:
+    return {
+        n.get("id") for n in logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str)
+    }
+
+
+def _check_amendment_unjustified_gateway(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any]
+) -> list[str]:
+    """AMENDMENT-DIFF-1 — garde-fou 1 : une opération classifiée 'insert_sequential' (aucun
+    marqueur conditionnel dans la demande, intent['conditional_evidence'] vide) ne doit jamais
+    produire de gateway. Régression observée en usage réel : 'ajoute une pesée du colis après le
+    scan' avait produit un gateway exclusif 'Pesée nécessaire ?' sans aucune condition dans le
+    texte (cf. SKILL.md section 21/24.1.1). Ce garde-fou structurel vérifie le résultat
+    réellement produit, en complément du rappel textuel déjà présent dans le prompt."""
+    if intent.get("operation_type") != "insert_sequential":
+        return []
+    old_ids = _amendment_node_ids(old_logic_core)
+    new_nodes = {
+        n.get("id"): n for n in new_logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str)
+    }
+    added_gateways = sorted(
+        nid for nid in (set(new_nodes) - old_ids) if new_nodes[nid].get("type") in GATEWAY_TYPES
+    )
+    if not added_gateways:
+        return []
+    return [
+        f"AMENDMENT-DIFF-1: l'opération 'insert_sequential' a produit {len(added_gateways)} gateway(s) "
+        f"{added_gateways} alors qu'aucun marqueur conditionnel n'a été détecté dans la demande — une "
+        "insertion séquentielle ne doit jamais créer de décision."
+    ]
+
+
+def _check_amendment_delete_scope(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any]
+) -> list[str]:
+    """AMENDMENT-DIFF-2 — garde-fou 2 : une opération de suppression (operation_type commençant
+    par 'delete_') doit retirer EXACTEMENT les nœuds ciblés (target_anchors), ni plus ni moins.
+    Un target_anchor encore présent signale une suppression non appliquée ; un nœud disparu hors
+    ancres signale un effet de bord non demandé (perte accidentelle d'un élément non concerné)."""
+    op_type = intent.get("operation_type") or ""
+    if not op_type.startswith("delete_"):
+        return []
+    target_anchors = {a for a in (intent.get("target_anchors") or []) if isinstance(a, str)}
+    if not target_anchors:
+        return []
+    old_ids = _amendment_node_ids(old_logic_core)
+    new_ids = _amendment_node_ids(new_logic_core)
+    removed_ids = old_ids - new_ids
+
+    errors: list[str] = []
+    still_present = sorted(target_anchors & new_ids)
+    if still_present:
+        errors.append(
+            f"AMENDMENT-DIFF-2: la suppression demandée n'a pas retiré {still_present}, alors que ces IDs "
+            "étaient explicitement ciblés (target_anchors) par l'opération classifiée."
+        )
+    unexpected_removed = sorted(removed_ids - target_anchors)
+    if unexpected_removed:
+        errors.append(
+            f"AMENDMENT-DIFF-2: la suppression a retiré {unexpected_removed}, des éléments qui n'étaient "
+            f"PAS ciblés par la demande (ancres déclarées : {sorted(target_anchors)})."
+        )
+    return errors
+
+
+def _check_amendment_no_new_cycle_on_delete(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any]
+) -> list[str]:
+    """AMENDMENT-DIFF-3 — garde-fou 3 : une suppression ne doit jamais introduire de cycle qui
+    n'existait pas avant l'amendement (la reconnexion prédécesseur -> successeur doit rester en
+    ligne droite). Réutilise _detect_backward_edges (même algorithme que
+    _check_unjustified_backward_loop) pour rester cohérent avec la définition déjà établie d'une
+    'boucle arrière' dans ce module — pas un second algorithme qui pourrait diverger."""
+    op_type = intent.get("operation_type") or ""
+    if not op_type.startswith("delete_"):
+        return []
+    old_cycles = _detect_backward_edges(old_logic_core.get("nodes", []), old_logic_core.get("edges", []))
+    new_cycles = _detect_backward_edges(new_logic_core.get("nodes", []), new_logic_core.get("edges", []))
+    if len(new_cycles) <= len(old_cycles):
+        return []
+    new_only = [f"{s}->{t}" for s, t in new_cycles if (s, t) not in old_cycles]
+    return [
+        f"AMENDMENT-DIFF-3: cette suppression a introduit {len(new_cycles) - len(old_cycles)} boucle(s) "
+        f"arrière supplémentaire(s) ({', '.join(new_only) or 'non identifiable individuellement'}) qui "
+        "n'existai(en)t pas avant l'amendement — une suppression ne doit jamais introduire de cycle."
+    ]
+
+
+def _check_amendment_replacement_type(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any]
+) -> list[str]:
+    """AMENDMENT-DIFF-4 — garde-fou 4 : pour un remplacement ('replace_task'), le type BPMN du
+    nœud qui reprend la position de l'ancien ancrage doit correspondre à replacement_new_type
+    prédit en [A] (réévalué depuis la nature du NOUVEL élément seul — cf. piège 3.2 : un
+    remplacement successif ne doit jamais hériter du type du remplacement précédent). Cas
+    dominant : l'ID de l'ancrage est conservé (philosophie de préservation d'ID déjà en place
+    dans tout le mode amendement), seul son 'type' change — repli sur une recherche par edges
+    adjacents si l'ID a néanmoins été réaffecté à un nouveau nœud."""
+    if intent.get("operation_type") != "replace_task":
+        return []
+    expected_type = intent.get("replacement_new_type")
+    target_anchors = [a for a in (intent.get("target_anchors") or []) if isinstance(a, str)]
+    if not expected_type or not target_anchors:
+        return []
+    old_id = target_anchors[0]
+    new_nodes = {
+        n.get("id"): n for n in new_logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str)
+    }
+    replacement_node = new_nodes.get(old_id)
+    if replacement_node is None:
+        # L'ancien ID a disparu : cherche le nœud qui a repris ses edges adjacents (mêmes voisins).
+        old_neighbors: set[str] = set()
+        for e in old_logic_core.get("edges", []):
+            if not isinstance(e, dict):
+                continue
+            if e.get("target") == old_id and isinstance(e.get("source"), str):
+                old_neighbors.add(e["source"])
+            if e.get("source") == old_id and isinstance(e.get("target"), str):
+                old_neighbors.add(e["target"])
+        for e in new_logic_core.get("edges", []):
+            if not isinstance(e, dict):
+                continue
+            src, tgt = e.get("source"), e.get("target")
+            if src in old_neighbors and tgt in new_nodes and tgt not in old_neighbors:
+                replacement_node = new_nodes.get(tgt)
+                break
+            if tgt in old_neighbors and src in new_nodes and src not in old_neighbors:
+                replacement_node = new_nodes.get(src)
+                break
+    if replacement_node is None:
+        return []
+    actual_type = replacement_node.get("type")
+    if actual_type == expected_type:
+        return []
+    return [
+        f"AMENDMENT-DIFF-4: le remplacement a produit un nœud '{replacement_node.get('id')}' de type "
+        f"'{actual_type}' alors que le type attendu pour ce remplacement était '{expected_type}' — le "
+        "type BPMN doit être réévalué depuis la nature du nouvel élément seul, jamais hérité de l'ancien."
+    ]
+
+
+def _check_amendment_mechanical_subtype(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any]
+) -> list[str]:
+    """AMENDMENT-DIFF-6 — garde-fou 6 : pour les sous-catégories d'ajout mécaniquement
+    vérifiables, contrôle directement la structure produite plutôt que de faire confiance
+    aveuglément à la classification de [A]. 'add_timer_event' : un nœud avec
+    eventDefinition='timer' doit apparaître parmi les nœuds ajoutés. 'add_multi_instance' :
+    réutilise la même détection syntaxique que _check_multi_instance_modeled_as_named_branches
+    (tâches au libellé identique à un numéro près) pour repérer une itération modélisée à tort
+    comme des branches nommées distinctes, et vérifie la présence de loopCharacteristics."""
+    op_type = intent.get("operation_type")
+    old_ids = _amendment_node_ids(old_logic_core)
+    added_nodes = [
+        n for n in new_logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str) and n["id"] not in old_ids
+    ]
+
+    if op_type == "add_timer_event":
+        if any(n.get("eventDefinition") == "timer" for n in added_nodes):
+            return []
+        return [
+            "AMENDMENT-DIFF-6: l'opération 'add_timer_event' n'a produit aucun nœud avec "
+            "eventDefinition='timer' parmi les éléments ajoutés — le délai décrit dans le texte doit être "
+            "modélisé par un boundaryEvent timer, pas ignoré ni approximé par un gateway."
+        ]
+
+    if op_type == "add_multi_instance":
+        has_loop_chars = any(n.get("loopCharacteristics") for n in added_nodes)
+        stems: dict[str, list[str]] = {}
+        for n in added_nodes:
+            name = (n.get("name") or "").strip()
+            match = _NAME_TRAILING_NUMBER_RE.match(name)
+            if match and match.group(1).strip():
+                stems.setdefault(match.group(1).strip().lower(), []).append(n["id"])
+        duplicated_ids = sorted(nid for ids in stems.values() if len(ids) >= 2 for nid in ids)
+        if duplicated_ids and not has_loop_chars:
+            return [
+                f"AMENDMENT-DIFF-6: l'opération 'add_multi_instance' a produit des tâches nommées "
+                f"dupliquées à suffixe numérique {duplicated_ids} au lieu d'une seule tâche avec "
+                "loopCharacteristics — une itération sur une collection doit être UNE tâche avec "
+                "loopCharacteristics, jamais N branches nommées distinctes."
+            ]
+    return []
+
+
+def validate_amendment_diff(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any] | None
+) -> list[str]:
+    """Étape [D] : compare l'ancien Logic-Core, le nouveau, et l'intention déclarée en [A] pour
+    détecter les écarts entre ce qui a été DEMANDÉ et ce qui a été RÉELLEMENT produit. Retourne
+    des erreurs BLOQUANTES destinées à rejoindre val_res.errors, au même titre que celles de
+    validate_logic_core (étape [C]) — le garde-fou 5 (taille du diff) est un avertissement non
+    bloquant, exposé séparément par check_amendment_diff_size_warning ci-dessous."""
+    if not isinstance(intent, dict) or not isinstance(old_logic_core, dict) or not isinstance(new_logic_core, dict):
+        return []
+    errors: list[str] = []
+    errors.extend(_check_amendment_unjustified_gateway(old_logic_core, new_logic_core, intent))
+    errors.extend(_check_amendment_delete_scope(old_logic_core, new_logic_core, intent))
+    errors.extend(_check_amendment_no_new_cycle_on_delete(old_logic_core, new_logic_core, intent))
+    errors.extend(_check_amendment_replacement_type(old_logic_core, new_logic_core, intent))
+    errors.extend(_check_amendment_mechanical_subtype(old_logic_core, new_logic_core, intent))
+    return errors
+
+
+def check_amendment_diff_size_warning(
+    old_logic_core: dict[str, Any], new_logic_core: dict[str, Any], intent: dict[str, Any] | None
+) -> list[str]:
+    """Garde-fou 5 (AVERTISSEMENT, non bloquant) : si le nombre réel de nœuds ajoutés diverge de
+    plus de 1 par rapport à expected_diff.nodes_added prédit en [A], c'est un signal d'un possible
+    effet de bord non demandé — l'estimation de [A] restant elle-même approximative, ceci reste
+    un avertissement et jamais une erreur bloquante (cf. demande explicite)."""
+    if not isinstance(intent, dict) or not isinstance(old_logic_core, dict) or not isinstance(new_logic_core, dict):
+        return []
+    diff = intent.get("expected_diff")
+    if not isinstance(diff, dict):
+        return []
+    expected_added = diff.get("nodes_added")
+    if not isinstance(expected_added, int):
+        return []
+    actual_added = len(_amendment_node_ids(new_logic_core) - _amendment_node_ids(old_logic_core))
+    if abs(actual_added - expected_added) <= 1:
+        return []
+    return [
+        f"L'amendement a ajouté {actual_added} nœud(s) alors que {expected_added} étaient attendus d'après "
+        f"l'intention classifiée ('{intent.get('operation_type')}') — vérifier qu'aucun effet de bord non "
+        "demandé n'a été introduit."
     ]
 
 
@@ -3255,12 +3512,12 @@ def validate_logic_core(logic_core: dict[str, Any], source_text: str | None = No
         if ntype == "parallelGateway":
             label = f"{node.get('name','')} {node.get('documentation','')}".lower()
             source_parallel_hint = bool(source_text) and any(keyword in (source_text or "").lower() for keyword in [
-                "parallel", "simultaneously", "concurrent", "en même temps", "simultanément",
-                "at the same time", "same time", "and split", "instruction parallèle", "synchronisation"
+                "parallel", "parallèle", "parallèlement", "simultaneously", "concurrent", "en même temps",
+                "simultanément", "at the same time", "same time", "and split", "instruction parallèle", "synchronisation"
             ])
             explicit_parallel = source_parallel_hint or any(keyword in label for keyword in [
-                "parallel", "simultaneously", "concurrent", "en même temps", "simultanément",
-                "and split", "instruction parallèle", "synchronisation"
+                "parallel", "parallèle", "parallèlement", "simultaneously", "concurrent", "en même temps",
+                "simultanément", "and split", "instruction parallèle", "synchronisation"
             ])
             if source_text is not None and not explicit_parallel and ("auto" in label or "fallback" in label):
                 errors.append(f"GATEWAY-001: ParallelGateway '{nid}' n'est pas justifié par la logique métier. Un parallèle doit être explicite dans le texte.")

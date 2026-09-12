@@ -497,6 +497,7 @@ def compute_layout(logic_core: dict[str, Any]) -> dict[str, Any]:
     max_h = max((p["y"] + p["height"] for p in raw_positions.values()), default=700.0) + 120.0
 
     return {
+         
         "nodes": raw_positions,
         "edges": edge_routes,
         "lanes": lane_positions,

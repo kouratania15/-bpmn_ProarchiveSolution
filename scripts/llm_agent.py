@@ -248,7 +248,7 @@ def _fallback_structured_analysis(user_text: str) -> dict[str, Any]:
 	    for key in keywords:
 	        for activity in activities:
 	            name = str(activity.get("name", "")).lower()
-	            if key in name:
+	        if key in name:
 	                return activity["id"]
 	    return None
 
@@ -363,6 +363,14 @@ def extract_structured_analysis(user_text: str, run_id: str | None = None,
 		"conforme au schema structured-analysis.schema.json. Chaque élément doit contenir une "
 		"preuve textuelle; garde les conditions sémantiques et utilise unknown si le type est inconnu. "
 		"N'invente aucun système, variable, protocole ou détail métier. Réponds uniquement en JSON.\n\n"
+		"Règle critique sur 'events' : ne JAMAIS créer un event qui ne fait que redécrire "
+		"l'accomplissement d'une activité déjà listée dans 'activities' (ex: si 'Envoyer confirmation "
+		"au client' existe déjà comme activity, ne PAS créer en plus un event 'Confirmation envoyée au "
+		"client' — c'est le même instant métier compté deux fois). Le tableau 'events' est réservé à : "
+		"(a) l'event de début du processus (event_type='start'), (b) un event réellement typé "
+		"(timer/message/error/signal/cancellation) qui porte une information que l'activité seule ne "
+		"porte pas (ex: un délai précis, un message externe). Une simple notification/confirmation déjà "
+		"couverte par une activité ne justifie jamais un event supplémentaire.\n\n"
 		f"Texte source:\n{user_text}"
 	)
 	messages = [{"role": "user", "content": prompt}]
@@ -395,30 +403,62 @@ def extract_structured_analysis(user_text: str, run_id: str | None = None,
 
 def build_process_description(analysis: dict[str, Any], run_id: str | None = None) -> dict[str, Any]:
 	"""Construit un Process Description sans réinterpréter le texte source."""
+	def _dicts(items: Any) -> list[dict[str, Any]]:
+		# extract_structured_analysis n'est pas garanti à 100% par le schéma JSON
+		# structuré de Mistral (déjà observé : un élément de tableau peut arriver
+		# comme simple chaîne au lieu d'un objet) — un item non-dict ne peut de
+		# toute façon pas être exploité comme participant/activité/etc., on
+		# l'ignore plutôt que de planter tout le pipeline sur un seul élément
+		# mal formé.
+		return [item for item in (items if isinstance(items, list) else []) if isinstance(item, dict)]
+
 	participants = []
-	for item in analysis.get("participants", []):
+	for item in _dicts(analysis.get("participants")):
 		participants.append({"id": item.get("id"), "name": item.get("name"), "type": "actor",
 			"description": item.get("evidence", ""), "sourceAnalysisId": item.get("id"),
 			"evidence": item.get("evidence", ""), "confidence": item.get("confidence", "medium")})
-	participant_ids = {item.get("name"): item.get("id") for item in analysis.get("participants", []) if item.get("name") and item.get("id")}
+	participant_ids = {item.get("name"): item.get("id") for item in _dicts(analysis.get("participants")) if item.get("name") and item.get("id")}
 	activities = []
-	for index, item in enumerate(analysis.get("activities", []), 1):
+	for index, item in enumerate(_dicts(analysis.get("activities")), 1):
 		activity = {"id": item.get("id"), "name": item.get("name"), "type": "task",
 			"sequence": index, "sourceAnalysisId": item.get("id"), "evidence": item.get("evidence", ""),
 			"source_text": item.get("source_text", item.get("evidence", "")), "confidence": item.get("confidence", "medium")}
-		if item.get("actor") in participant_ids:
-			activity["actor_id"] = participant_ids[item["actor"]]
+		actor = item.get("actor")
+		if isinstance(actor, list):
+			actor = actor[0] if actor else None
+		if actor in participant_ids:
+			activity["actor_id"] = participant_ids[actor]
 		activities.append(activity)
-	events = [{"id": item.get("id"), "name": item.get("name"), "type": item.get("event_type", "intermediate"),
-		"trigger": item.get("trigger", ""), "sourceAnalysisId": item.get("id"),
-		"evidence": item.get("evidence", ""), "confidence": item.get("confidence", "medium")}
-		for item in analysis.get("events", [])]
+	# extract_structured_analysis génère systématiquement, pour une grande partie des
+	# activités, un "event" fantôme qui ne fait que redécrire le même instant métier
+	# (ex: activity "Envoyer confirmation au client" + event "Confirmation envoyée au
+	# client" avec trigger=cet id d'activité) — sans qu'aucune relation ne référence
+	# jamais cet event (les relations ne connectent que des activities/conditions).
+	# Un tel event est structurellement toujours orphelin, une erreur de validation
+	# fatale que le self-healing ne corrige pas de façon fiable en 3 tentatives
+	# (régression confirmée en usage réel). Un event de type intermediate/end dont le
+	# trigger pointe vers une activité déjà listée n'apporte aucune information que
+	# l'activité ne porte déjà : on le retire mécaniquement, sans dépendre du LLM.
+	# Les events start (jamais dupliqués ainsi) et les events réellement typés
+	# (timer/message/error/signal/cancellation, qui portent une sémantique BPMN que
+	# l'activité seule ne porte pas) sont conservés intacts.
+	activity_ids = {item.get("id") for item in _dicts(analysis.get("activities")) if item.get("id")}
+	events = [
+		{"id": item.get("id"), "name": item.get("name"), "type": item.get("event_type", "intermediate"),
+		 "trigger": item.get("trigger", ""), "sourceAnalysisId": item.get("id"),
+		 "evidence": item.get("evidence", ""), "confidence": item.get("confidence", "medium")}
+		for item in _dicts(analysis.get("events"))
+		if not (
+			item.get("event_type") in ("intermediate", "end")
+			and item.get("trigger") in activity_ids
+		)
+	]
 	conditions = [{"id": item.get("id"), "condition_text": item.get("condition"),
 		"branches": [{"condition": branch.get("label"), "outcome": branch.get("meaning")}
-			for branch in item.get("branches", [])], "sourceAnalysisId": item.get("id"),
-		"evidence": item.get("evidence", "")} for item in analysis.get("conditions", [])]
+			for branch in _dicts(item.get("branches"))], "sourceAnalysisId": item.get("id"),
+		"evidence": item.get("evidence", "")} for item in _dicts(analysis.get("conditions"))]
 	relations = []
-	for index, item in enumerate(analysis.get("relations", []), 1):
+	for index, item in enumerate(_dicts(analysis.get("relations")), 1):
 		raw_relation = item.get("relation")
 		relation_type = "message" if raw_relation == "message" else "sequence"
 		relations.append({"id": item.get("id") or f"relation_{index:03d}",
@@ -427,8 +467,8 @@ def build_process_description(analysis: dict[str, Any], run_id: str | None = Non
 		"conditions": conditions, "gateways": [], "relations": relations,
 		"sequence_flows": []}
 	result = {"process_name": "Processus analysé", "understanding_summary": "Analyse structurée des faits source.",
-		"identified_elements": identified, "gaps": [{"gap_id": gap["id"], "description": gap["description"],
-			"severity": gap["severity"]} for gap in analysis.get("gaps", [])], "confidence_level": "medium",
+		"identified_elements": identified, "gaps": [{"gap_id": gap.get("id"), "description": gap.get("description"),
+			"severity": gap.get("severity")} for gap in _dicts(analysis.get("gaps"))], "confidence_level": "medium",
 		"source_text_summary": "Construit depuis l'analyse structurée."}
 	if run_id:
 		_log_llm(run_id, ActionType.GENERATION, "process_description_generation", "success",
@@ -697,10 +737,210 @@ def generate_logic_core_from_pd(process_desc: dict[str, Any], run_id: str | None
 		raise
 
 
+# Catalogue partagé entre extract_amendment_intent (classification, étape [A]) et
+# extract_logic_core (application, étape [B]) : une seule source pour le triplet
+# (déclencheur textuel, règle courte, pointeur SKILL.md §24) évite de dupliquer les 34
+# sous-catégories dans deux prompts qui pourraient diverger avec le temps.
+_AMENDMENT_OPERATION_CATALOG: list[dict[str, str]] = [
+	{"operation_type": "insert_sequential", "section": "27.1.1",
+	 "trigger": "\"ajoute X après Y\" / \"insère X avant Y\" / \"ajoute une étape de X\", SANS marqueur conditionnel",
+	 "rule": "Insertion séquentielle simple : AUCUN gateway créé. \"après\"/\"avant\" décrit un ordre, jamais une condition."},
+	{"operation_type": "insert_conditional_exclusive", "section": "27.1.2",
+	 "trigger": "marqueur conditionnel explicite : \"si\", \"sinon\", \"selon que\", \"dans le cas où\", \"à condition que\"",
+	 "rule": "Créer un exclusiveGateway après le nœud d'ancrage, une branche par issue décrite, chaque sequenceFlow sortant nommé/conditionné."},
+	{"operation_type": "insert_conditional_inclusive", "section": "27.1.3",
+	 "trigger": "au moins deux conditions énoncées indépendamment, pouvant être vraies simultanément pour un même cas",
+	 "rule": "inclusiveGateway (jamais exclusiveGateway), refermé par un second inclusiveGateway convergent avant toute tâche commune. Détection sur la STRUCTURE SYNTAXIQUE, pas sur un vocabulaire déjà vu en exemple."},
+	{"operation_type": "insert_parallel", "section": "27.1.4",
+	 "trigger": "\"en parallèle\", \"en même temps\", \"simultanément\", \"pendant que\"",
+	 "rule": "parallelGateway en split, refermé par un parallelGateway convergent (jamais un exclusif) avant la tâche commune suivante."},
+	{"operation_type": "insert_event_based_gateway", "section": "27.1.5",
+	 "trigger": "\"attend soit X soit Y, selon ce qui arrive en premier\"",
+	 "rule": "eventBasedGateway en point de divergence DIRECT (jamais précédé d'une tâche \"attendre\"), suivi des catch events concurrents."},
+	{"operation_type": "insert_complex_gateway", "section": "27.1.6",
+	 "trigger": "seuil de comptage (\"au moins N des M critères/conditions/votes\")",
+	 "rule": "complexGateway avec la condition de seuil documentée en langage naturel — jamais approximé par exclusif/inclusif."},
+	{"operation_type": "insert_loop_backward", "section": "27.1.7",
+	 "trigger": "\"corrige et resoumets\", \"recommence\", \"à nouveau X\", \"tant que\", \"jusqu'à ce que\"",
+	 "rule": "Ajouter un sequenceFlow de retour vers le nœud EXISTANT identifié — ne jamais dupliquer ce nœud."},
+	{"operation_type": "add_actor_internal_lane", "section": "27.1.8",
+	 "trigger": "rôle/service mentionné sans qualification d'externalité, ou explicitement interne à l'organisation",
+	 "rule": "Créer une nouvelle lane dans la pool principale existante, jamais une pool séparée."},
+	{"operation_type": "add_actor_external_pool", "section": "27.1.9",
+	 "trigger": "qualification explicite d'externalité (\"externe\", \"partenaire\", \"fournisseur\", \"banque\", \"prestataire\", \"tiers\", \"sous-traitant\")",
+	 "rule": "Créer une nouvelle pool séparée, reliée par messageFlow — jamais par sequenceFlow direct."},
+	{"operation_type": "add_subprocess_embedded", "section": "27.1.10",
+	 "trigger": "\"ce qui inclut...\", \"composé de...\", une action qui se décompose en plusieurs sous-étapes énumérées",
+	 "rule": "Créer un subProcess contenant TOUTES les sous-étapes énumérées comme enfants directs, avec son propre startEvent/endEvent internes."},
+	{"operation_type": "add_call_activity", "section": "27.1.11",
+	 "trigger": "\"appelle le processus standard de X\", réutilisation explicite ailleurs",
+	 "rule": "Un seul élément callActivity avec calledElement — jamais une pool séparée simulant l'appel, jamais un subProcess détaillé en double."},
+	{"operation_type": "add_subprocess_adhoc", "section": "27.1.12",
+	 "trigger": "\"n'importe quel ordre\", \"selon les disponibilités\", \"sans ordre imposé\"",
+	 "rule": "adHocSubProcess (marqueur \"~\"), tâches internes SANS sequenceFlow stricts — jamais un gateway parallèle."},
+	{"operation_type": "add_subprocess_transactional", "section": "27.1.13",
+	 "trigger": "\"comme une seule opération\", \"si une étape échoue, annuler toutes les précédentes\"",
+	 "rule": "subProcess avec isTransaction=true, cancelEndEvent interne ou boundaryEvent cancel attaché."},
+	{"operation_type": "add_subprocess_event", "section": "27.1.14",
+	 "trigger": "\"à tout moment pendant ce traitement, si X survient\"",
+	 "rule": "subProcess avec triggeredByEvent=true, déclenché par un start event interne typé. Reste dans la MÊME pool que le processus qu'il interrompt."},
+	{"operation_type": "add_timer_event", "section": "27.1.15",
+	 "trigger": "délai exprimé en unité de temps (\"après N heures/jours\", \"sous N\")",
+	 "rule": "boundaryEvent avec eventDefinition=timer, eventDetail au format ISO 8601. Interruptif par défaut, sauf marqueur \"sans interrompre\". Ne jamais confondre avec une escalade générique."},
+	{"operation_type": "add_signal_event", "section": "27.1.16",
+	 "trigger": "broadcast à plusieurs récepteurs potentiels",
+	 "rule": "throw signal event + catch signal events — jamais un flux de message point-à-point. Le flux normal continue par sequenceFlow classique dans la MÊME pool."},
+	{"operation_type": "add_escalation_event", "section": "27.1.17",
+	 "trigger": "condition métier non temporelle (\"si le montant dépasse X\") déclenchant une remontée hiérarchique",
+	 "rule": "escalationEvent / escalationBoundaryEvent."},
+	{"operation_type": "add_compensation_event", "section": "27.1.18",
+	 "trigger": "\"annule automatiquement [action déjà effectuée] si [échec ultérieur]\"",
+	 "rule": "compensationBoundaryEvent attaché à la tâche compensée + tâche isForCompensation reliée par association + throw compensation event dans la branche d'échec."},
+	{"operation_type": "add_conditional_event", "section": "27.1.19",
+	 "trigger": "\"reste en attente jusqu'à ce que [condition] devienne vraie\"",
+	 "rule": "intermediateCatchEvent eventDefinition=conditional, placé DANS le flux principal."},
+	{"operation_type": "add_terminate_event", "section": "27.1.20",
+	 "trigger": "\"le processus s'arrête immédiatement dans son ensemble\"",
+	 "rule": "endEvent eventDefinition=terminate."},
+	{"operation_type": "add_multi_instance", "section": "27.1.21",
+	 "trigger": "\"chacun des N fait X indépendamment\" (parallèle) ou \"pour chaque X, l'un après l'autre\" (séquentiel)",
+	 "rule": "UNE SEULE tâche avec loopCharacteristics — jamais N tâches nommées distinctes reliées par un exclusiveGateway."},
+	{"operation_type": "add_data_object", "section": "27.1.22",
+	 "trigger": "\"en utilisant X\", \"en se basant sur X\", \"enregistre dans X\", \"consulte X\"",
+	 "rule": "dataObjectReference ou dataStoreReference selon la nature de X, relié par association."},
+	{"operation_type": "delete_task_simple", "section": "27.2.1",
+	 "trigger": "retrait d'une tâche simple au milieu d'un flux",
+	 "rule": "Retirer le nœud et ses edges. Reconnecter DIRECTEMENT le prédécesseur au successeur, en conservant leur ordre relatif exact. Ne jamais créer de boucle qui n'existait pas."},
+	{"operation_type": "delete_gateway_branch", "section": "27.2.2",
+	 "trigger": "retrait d'une branche entière d'un gateway",
+	 "rule": "Retirer la branche. Si une seule branche reste, retirer aussi le gateway et reconnecter en séquentiel."},
+	{"operation_type": "delete_gateway_full", "section": "27.2.3",
+	 "trigger": "suppression complète d'un gateway",
+	 "rule": "Reconnexion directe prédécesseur → successeur (même règle que delete_task_simple)."},
+	{"operation_type": "delete_actor", "section": "27.2.4",
+	 "trigger": "suppression d'un acteur (lane ou pool)",
+	 "rule": "Réassigner ou retirer explicitement toutes les tâches de cet acteur — jamais de tâches orphelines sans poolId/laneId valide."},
+	{"operation_type": "delete_subprocess", "section": "27.2.5",
+	 "trigger": "suppression d'un sous-processus",
+	 "rule": "Remonter les sous-étapes au niveau parent si demandé, ou tout retirer et reconnecter (même règle que delete_task_simple)."},
+	{"operation_type": "delete_event", "section": "27.2.6",
+	 "trigger": "suppression d'un événement (timer, signal, etc.)",
+	 "rule": "boundaryEvent -> retirer uniquement l'événement et sa branche, la tâche hôte reste inchangée. Événement dans le flux principal -> reconnecter (même règle que delete_task_simple)."},
+	{"operation_type": "delete_data_object", "section": "27.2.7",
+	 "trigger": "suppression d'un objet de données",
+	 "rule": "Retirer la référence et son association, n'affecte jamais le flux de séquence."},
+	{"operation_type": "rename_only", "section": "27.3.1",
+	 "trigger": "renommage pur, sans changement de structure",
+	 "rule": "Changer UNIQUEMENT \"name\". ID, type, position, connexions : inchangés."},
+	{"operation_type": "replace_task", "section": "27.3.2",
+	 "trigger": "\"remplace X par Y\"",
+	 "rule": "Le TYPE BPMN du nouveau nœud doit être réévalué à partir de la nature de Y SEULE — jamais hérité du type de X. Les edges de X sont repris à l'identique."},
+	{"operation_type": "replace_gateway_type", "section": "27.3.3",
+	 "trigger": "les branches d'un gateway existant deviennent, ou cessent d'être, mutuellement exclusives",
+	 "rule": "Convertir exclusif <-> inclusif en ajoutant/retirant le gateway de convergence correspondant."},
+	{"operation_type": "change_task_actor", "section": "27.3.4",
+	 "trigger": "\"c'est maintenant [autre acteur] qui fait X\"",
+	 "rule": "Changer poolId/laneId. Si changement de pool, réévaluer si les edges adjacents doivent devenir messageFlow (règle add_actor_external_pool + POOL-001)."},
+	{"operation_type": "change_gateway_condition", "section": "27.3.5",
+	 "trigger": "modification du critère d'une condition déjà modélisée sur un gateway existant",
+	 "rule": "Mettre à jour UNIQUEMENT \"condition\"/\"name\" des sequenceFlow sortants concernés — jamais recréer le gateway ni changer son ID."},
+]
+
+_AMENDMENT_OPERATION_BY_TYPE = {entry["operation_type"]: entry for entry in _AMENDMENT_OPERATION_CATALOG}
+
+# Les 3 pièges déjà observés en usage réel (cf. section 27 de SKILL.md) sont dupliqués ici
+# tels quels, en plus de leur présence dans le system prompt (SKILL.md) : un rappel inline,
+# au plus près du point où l'erreur se produit, s'est montré plus fiable qu'un rappel noyé
+# dans un prompt système déjà très long (cf. le bug du gateway inventé sur v01_insertion_simple).
+_AMENDMENT_PITFALLS = {
+	"insert_sequential": (
+		"PIÈGE À ÉVITER : ne jamais transformer une insertion simple en décision conditionnelle sous "
+		"prétexte que \"après\"/\"avant\" pourrait sembler introduire une alternative — c'est un repère "
+		"de position dans le flux, jamais un critère de décision, sauf marqueur conditionnel explicite."
+	),
+	"insert_conditional_inclusive": (
+		"PIÈGE À ÉVITER : ce pattern doit être détecté sur la STRUCTURE SYNTAXIQUE du texte (plusieurs "
+		"conditions énoncées indépendamment, non mutuellement exclusives), jamais sur un vocabulaire "
+		"métier précis déjà vu en exemple."
+	),
+	"replace_task": (
+		"PIÈGE À ÉVITER : un remplacement successif repart TOUJOURS de la description du nouveau "
+		"remplacement seule, jamais de la classification du remplacement précédent — le type BPMN n'est "
+		"jamais hérité."
+	),
+}
+
+
+def extract_amendment_intent(user_text: str, existing_logic_core: dict[str, Any],
+							 run_id: str | None = None, api_key: str | None = None,
+							 model: str = DEFAULT_MODEL) -> dict[str, Any]:
+	"""Étape [A] de l'architecture d'amendement : classifie l'opération demandée AVANT de
+	l'appliquer, plutôt que de laisser un unique appel LLM aller directement du texte au
+	nouveau Logic-Core sans jamais formaliser quelle opération est en jeu. Symétrique au
+	Process Description qui existe déjà pour la génération initiale (extract_process_description).
+
+	Ne modifie rien : produit uniquement l'intention structurée (operation_type, ancres
+	réelles, preuve textuelle, diff attendu) consommée ensuite par extract_logic_core (étape
+	[B]) et validate_amendment_diff (étape [D])."""
+	catalog_lines = "\n".join(
+		f"- {entry['operation_type']} : {entry['trigger']}" for entry in _AMENDMENT_OPERATION_CATALOG
+	)
+	prompt = (
+		"Classifie PRÉCISÉMENT l'opération d'amendement demandée par l'utilisateur sur ce Logic-Core "
+		"existant. Choisis EXACTEMENT une valeur de operation_type parmi celles listées ci-dessous "
+		"(la plus spécifique possible, jamais une approximation). Résous target_anchors en IDs RÉELS "
+		"déjà présents dans le Logic-Core fourni — jamais devinés par proximité de nom : si un élément "
+		"visé n'a pas d'ID correspondant évident, laisse target_anchors vide plutôt que d'inventer un ID.\n\n"
+		"Catalogue des opérations (operation_type : déclencheur textuel) :\n"
+		f"{catalog_lines}\n\n"
+		"evidence_quote : la citation exacte du texte de la demande justifiant ce choix.\n"
+		"conditional_evidence : le marqueur conditionnel exact trouvé (\"si\", \"sinon\", \"selon que\", "
+		"...), ou null si la demande n'en contient aucun — NE JAMAIS en inventer un.\n"
+		"replacement_new_type : uniquement pour replace_task/replace_gateway_type, le type BPMN attendu "
+		"du nouvel élément réévalué depuis sa propre nature ; null sinon.\n"
+		"expected_diff : ta meilleure estimation du nombre de nœuds ajoutés/retirés et de gateways "
+		"ajoutés par cette opération.\n\n"
+		f"Logic-Core existant (pour résoudre les IDs réels) :\n{json.dumps(existing_logic_core, ensure_ascii=False)}\n"
+		f"Instruction d'amendement :\n{user_text}"
+	)
+	messages = [{"role": "user", "content": prompt}]
+	raw = _complete(_get_mistral_client(api_key), model, messages,
+					"amendment-intent.schema.json", "amendment_intent")
+	result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("amendment-intent.schema.json"))
+	# _prune_extra_properties ne recurse que dans les sous-schemas object/array : un champ
+	# scalaire (operation_type, "type": "string" + "enum") dont la valeur arrive malgré tout
+	# sous forme de dict (observé en usage réel : {"value": "insert_sequential"}, ou même le
+	# fragment de schéma lui-même {"type": "string", "enum": [...]}) traverse cette fonction
+	# sans être corrigé, puis fait planter tout appelant qui l'utilise comme clé de dict
+	# (TypeError: unhashable type: 'dict'). Tenter une récupération sur les formes déjà
+	# observées avant d'abandonner proprement.
+	op_type = result.get("operation_type") if isinstance(result, dict) else None
+	if isinstance(op_type, dict):
+		if isinstance(op_type.get("value"), str):
+			op_type = op_type["value"]
+		elif isinstance(op_type.get("const"), str):
+			op_type = op_type["const"]
+		elif isinstance(op_type.get("enum"), list) and op_type["enum"] and isinstance(op_type["enum"][0], str):
+			op_type = op_type["enum"][0]
+		else:
+			op_type = None
+		result["operation_type"] = op_type
+	if not isinstance(result, dict) or result.get("operation_type") not in _AMENDMENT_OPERATION_BY_TYPE:
+		raise ValueError(f"operation_type invalide ou non reconnu retourné par la classification : {op_type!r}")
+	_log_llm(run_id, ActionType.ANALYSIS, "amendment_intent", "success", _trace_prompt(messages), raw, model=model)
+	return result
+
+
 def extract_logic_core(user_text: str, existing_logic_core: dict[str, Any] | None = None,
 					   run_id: str | None = None, api_key: str | None = None,
-					   model: str = DEFAULT_MODEL) -> dict[str, Any]:
-	"""API historique conservée pour les intégrations existantes."""
+					   model: str = DEFAULT_MODEL, intent: dict[str, Any] | None = None) -> dict[str, Any]:
+	"""API historique conservée pour les intégrations existantes.
+
+	`intent` (optionnel) : sortie de extract_amendment_intent (étape [A]) — quand fourni, la
+	demande d'amendement n'est plus appliquée à l'aveugle : l'opération déjà classifiée, ses
+	ancres réelles et la règle précise correspondante (cf. section 27 de SKILL.md) sont
+	injectées explicitement, plutôt que de compter uniquement sur le LLM pour reclassifier
+	implicitement l'opération une seconde fois au moment de l'appliquer."""
 	if existing_logic_core is not None:
 		prompt = (
 			"Amende ce Logic-Core avec la demande utilisateur. Conserve tous les IDs existants (nœuds, "
@@ -718,8 +958,34 @@ def extract_logic_core(user_text: str, existing_logic_core: dict[str, Any] | Non
 			"règle s'applique à TOUT sequenceFlow existant qui reste conceptuellement le même flux mais "
 			"voit son point de départ ou d'arrivée réaffecté à un nœud nouvellement inséré — jamais un "
 			"renommage, toujours une réaffectation de la même arête.\n"
-			f"Logic-Core:\n{json.dumps(existing_logic_core, ensure_ascii=False)}\nDemande:\n{user_text}"
 		)
+		if intent is not None:
+			op_type = intent.get("operation_type")
+			catalog_entry = _AMENDMENT_OPERATION_BY_TYPE.get(op_type)
+			diff = intent.get("expected_diff") or {}
+			rule_pointer = (
+				f" (cf. section {catalog_entry['section']} de SKILL.md : {catalog_entry['rule']})"
+				if catalog_entry else ""
+			)
+			prompt += (
+				f"\nIntention déjà classifiée (étape préalable) : operation_type = '{op_type}'{rule_pointer}.\n"
+				f"Ancre(s) réelle(s) visée(s) dans le Logic-Core ci-dessous : {intent.get('target_anchors')}.\n"
+				f"Preuve textuelle : \"{intent.get('evidence_quote')}\".\n"
+				f"Marqueur conditionnel détecté dans la demande : {intent.get('conditional_evidence') or 'AUCUN'}.\n"
+				f"Ampleur structurelle attendue : +{diff.get('nodes_added', 0)} nœud(s), "
+				f"-{diff.get('nodes_removed', 0)} nœud(s), +{diff.get('gateways_added', 0)} gateway(s) — un écart "
+				"important par rapport à cette estimation doit être délibéré, pas accidentel.\n"
+				"Applique STRICTEMENT la règle de cette opération, pas une autre.\n"
+			)
+			if intent.get("replacement_new_type"):
+				prompt += (
+					f"Type BPMN attendu pour le nouvel élément : '{intent['replacement_new_type']}' — réévalué "
+					"depuis la nature de ce nouvel élément SEULE, jamais hérité du type de l'ancien.\n"
+				)
+			pitfall = _AMENDMENT_PITFALLS.get(op_type)
+			if pitfall:
+				prompt += f"{pitfall}\n"
+		prompt += f"Logic-Core:\n{json.dumps(existing_logic_core, ensure_ascii=False)}\nDemande:\n{user_text}"
 		messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
 		raw = _complete(_get_mistral_client(api_key), model, messages, "logic-core.schema.json", "logic_core_amendment")
 		result = _prune_extra_properties(_strip_schema_metadata(json.loads(raw)), _load_json_schema("logic-core.schema.json"))
@@ -785,6 +1051,31 @@ def self_heal_logic_core(faulty_logic_core: dict[str, Any], validation_errors: l
 			"\nRappel de correction : donne à chaque endEvent sans nom un nom explicite décrivant l'issue "
 			"métier qu'il représente (ex: 'Prêt approuvé', 'Commande annulée'), sans changer son id."
 		)
+	if any("est inaccessible depuis les événements de début" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : au moins un nœud n'est relié par AUCUN chemin de sequenceFlow depuis un "
+			"startEvent — c'est un nœud orphelin, ou une branche/étape ajoutée sans être raccordée au reste du "
+			"flux existant (fréquent quand un amendement ajoute plusieurs nœuds liés entre eux mais oublie le "
+			"sequenceFlow qui les connecte au flux principal). Relie-le explicitement : ajoute le sequenceFlow "
+			"manquant depuis le nœud/gateway précédent pertinent d'après le texte vers ce nœud (ou vers le "
+			"premier nœud de sa branche s'il en fait partie), sans changer les IDs déjà présents ni dupliquer "
+			"un nœud existant."
+		)
+	if any("doit avoir des branches décisionnelles cohérentes" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : cet exclusiveGateway a des branches sans libellé ni condition — un "
+			"exclusiveGateway auto-inséré mécaniquement par le validateur (car le nœud précédent portait "
+			"plusieurs sequenceFlow sortants) n'a PAS reçu de libellés, ce n'est pas forcément une vraie "
+			"décision métier. Relis le texte source pour trancher : (1) si c'est réellement une décision avec "
+			"un critère explicite, ajoute à chaque sequenceFlow sortant un 'name'/'condition' décrivant ce "
+			"critère (ex: 'Montant > 500€' / 'Montant ≤ 500€') ; (2) si le texte décrit en réalité un DÉLAI "
+			"('si aucune réponse sous 24h...', 'si non traité avant...'), ce n'est pas une décision mais un "
+			"timeout — supprime ce gateway et les sequenceFlow qu'il porte, remplace-les par un boundaryEvent "
+			"(eventDefinition='timer', eventDetail au format ISO 8601, attachedToRef=la tâche concernée) relié "
+			"par sequenceFlow à la branche d'échéance dépassée (cf. section sur les timers de SKILL.md) ; (3) si "
+			"les branches représentent en réalité deux actions simultanées et non une alternative, remplace ce "
+			"gateway par un parallelGateway et justifie-le explicitement dans son nom (ex: 'en parallèle')."
+		)
 	if any("sequenceFlow sortants alors qu'il n'est pas un gateway" in err for err in validation_errors):
 		prompt += (
 			"\nRappel de correction : ce nœud a probablement fusionné à tort DEUX occurrences textuelles "
@@ -822,6 +1113,45 @@ def self_heal_logic_core(faulty_logic_core: dict[str, Any], validation_errors: l
 			"tâche intermédiaire dans le pool du gateway (ex: 'Transmettre la décision'), relie le gateway à "
 			"cette tâche par sequenceFlow, puis fais porter le messageFlow SUR cette tâche intermédiaire vers "
 			"la tâche de l'autre pool — jamais directement depuis/vers le gateway lui-même."
+		)
+	# Rappels pour les erreurs de validate_amendment_diff (étape [D]) : ce sont des écarts entre
+	# ce qui a été DEMANDÉ (intention classifiée en [A]) et ce qui a été RÉELLEMENT produit, pas
+	# des erreurs de soundness BPMN générique — le rappel doit donc pointer vers l'intention
+	# déclarée plutôt que reformuler une règle de structure déjà couverte ailleurs.
+	if any("AMENDMENT-DIFF-1" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : cette opération a été classifiée comme une insertion séquentielle "
+			"SANS marqueur conditionnel, mais un ou plusieurs gateways ont été créés. Retire ce(s) "
+			"gateway(s) et les branches qu'il(s) porte(nt), reconnecte simplement en série "
+			"prédécesseur -> nouvelle étape -> successeur, sans jamais introduire de décision."
+		)
+	if any("AMENDMENT-DIFF-2" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : la suppression demandée ne correspond pas exactement à ce qui a été "
+			"ciblé — soit un élément à supprimer est encore présent, soit un élément non visé a disparu. "
+			"Ne retire QUE les ancres explicitement ciblées par l'intention déclarée, reconnecte le reste "
+			"à l'identique, et restaure tout élément non ciblé qui aurait disparu par erreur."
+		)
+	if any("AMENDMENT-DIFF-3" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : cette suppression a introduit une boucle arrière qui n'existait pas "
+			"avant l'amendement. Une suppression ne doit JAMAIS créer de cycle : reconnecte directement le "
+			"prédécesseur du nœud supprimé à son successeur, en ligne droite, sans retour en arrière."
+		)
+	if any("AMENDMENT-DIFF-4" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : le type BPMN du nœud de remplacement ne correspond pas au type "
+			"attendu (réévalué depuis la description du nouvel élément SEULE, cf. règle 3.2 / section "
+			"27.3.2 de SKILL.md). Corrige le 'type' de ce nœud pour qu'il corresponde exactement au type "
+			"attendu, sans changer son id ni ses edges déjà repris de l'ancien nœud."
+		)
+	if any("AMENDMENT-DIFF-6" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : le sous-type mécaniquement vérifiable de cette opération d'ajout "
+			"n'est pas correctement modélisé (ex: un timer sans eventDefinition='timer', ou un "
+			"multi-instance modélisé à tort comme plusieurs tâches nommées 'X 1'/'X 2' au lieu d'une seule "
+			"tâche avec loopCharacteristics). Corrige la structure pour qu'elle corresponde exactement au "
+			"pattern attendu de cette sous-catégorie (cf. section 27 de SKILL.md)."
 		)
 	messages: list[dict[str, str]] = []
 	try:

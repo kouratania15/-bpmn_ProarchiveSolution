@@ -1,0 +1,70 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "documentation": "Processus de recrutement d'un nouvel employé incluant l'initiation du recrutement et la préparation de son arrivée par le service RH.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_rh",
+      "name": "Service RH",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "type": "startEvent",
+      "name": "Début du processus de recrutement",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_recrutement",
+      "type": "task",
+      "name": "Recrutement d'un nouvel employé",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_preparation_arrivee",
+      "type": "task",
+      "name": "Préparation de l'arrivée du nouvel employé",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_recrutement",
+      "type": "endEvent",
+      "name": "Fin du processus de recrutement",
+      "eventDefinition": "none",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_recrutement",
+      "source": "start_recrutement",
+      "target": "task_recrutement",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "event_1->activity_1"
+    },
+    {
+      "id": "flow_recrutement_preparation",
+      "source": "task_recrutement",
+      "target": "task_preparation_arrivee",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_1->activity_2"
+    },
+    {
+      "id": "flow_preparation_end",
+      "source": "task_preparation_arrivee",
+      "target": "end_recrutement",
+      "type": "sequenceFlow"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "edges": [
+    {
+      "id": "flow_start_to_submit_expense",
+      "type": "sequenceFlow",
+      "source": "start_event_expense_submitted",
+      "target": "task_submit_expense",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_expense_to_check_amount",
+      "type": "sequenceFlow",
+      "source": "task_submit_expense",
+      "target": "intermediate_event_check_amount",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_check_amount_to_gateway",
+      "type": "sequenceFlow",
+      "source": "intermediate_event_check_amount",
+      "target": "exclusive_gateway_amount_check"
+    },
+    {
+      "id": "flow_gateway_to_transmit_finance",
+      "name": "Montant > 1000 euros",
+      "type": "sequenceFlow",
+      "source": "exclusive_gateway_amount_check",
+      "target": "task_transmit_to_finance_director",
+      "condition": "montant > 1000 euros",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_transmit_to_finance_review",
+      "type": "sequenceFlow",
+      "source": "task_transmit_to_finance_director",
+      "target": "task_finance_director_reviews",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_finance_review_to_manager_approve",
+      "type": "sequenceFlow",
+      "source": "task_finance_director_reviews",
+      "target": "task_manager_approves",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_gateway_to_approve_directly",
+      "name": "Montant ≤ 1000 euros",
+      "type": "sequenceFlow",
+      "source": "exclusive_gateway_amount_check",
+      "target": "task_manager_approves_2",
+      "condition": "montant ≤ 1000 euros",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_approve_to_end_approved",
+      "type": "sequenceFlow",
+      "source": "task_manager_approves",
+      "target": "end_event_expense_approved"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "task_manager_approves_2",
+      "target": "end_event_expense_rejected"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_expense_submitted",
+      "name": "Note de frais soumise",
+      "type": "startEvent",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_expense",
+      "name": "Soumet une note de frais",
+      "type": "task",
+      "laneId": "lane_employee",
+      "poolId": "company_pool",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "intermediate_event_check_amount",
+      "name": "Vérification du montant",
+      "type": "intermediateCatchEvent",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — eventDefinition manquant, inféré automatiquement comme 'conditional' à partir du nom du nœud — à vérifier contre le texte source (cf. section 8.1 de SKILL.md). ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "conditional",
+      "sourceProcessElement": "event_2"
+    },
+    {
+      "id": "exclusive_gateway_amount_check",
+      "name": "Montant dépasse 1000 euros ?",
+      "type": "exclusiveGateway",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "gateway_1"
+    },
+    {
+      "id": "task_transmit_to_finance_director",
+      "name": "Transmet la note de frais au directeur financier",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "company_pool",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_finance_director_reviews",
+      "name": "Directeur financier examine la note de frais",
+      "type": "task",
+      "laneId": "lane_finance_director",
+      "poolId": "company_pool",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_manager_approves",
+      "name": "Manager approuve la note de frais",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "company_pool",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_event_expense_approved",
+      "name": "Note de frais approuvée",
+      "type": "endEvent",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "end_event_expense_rejected",
+      "name": "Note de frais rejetée",
+      "type": "endEvent",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — reçoit une transition de secours depuis 'task_manager_approves' ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "task_manager_approves_2",
+      "name": "Manager approuve la note de frais",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "company_pool",
+      "sourceProcessElement": "activity_4"
+    }
+  ],
+  "pools": [
+    {
+      "id": "company_pool",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employee",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        },
+        {
+          "id": "lane_finance_director",
+          "name": "Directeur Financier"
+        }
+      ]
+    }
+  ],
+  "process": {
+    "id": "process_expense_report",
+    "name": "Processus d'approbation de note de frais",
+    "isExecutable": true,
+    "documentation": "Processus d'approbation d'une note de frais avec condition basée sur le montant."
+  }
+}

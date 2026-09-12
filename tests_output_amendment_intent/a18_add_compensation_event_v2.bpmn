@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reservation"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_flight_to_process_flight" name="flow_flight_to_process_flight" />
+  <bpmn:message id="Message_flow_process_flight_to_hotel" name="flow_process_flight_to_hotel" />
+  <bpmn:message id="Message_flow_hotel_to_process_hotel" name="flow_hotel_to_process_hotel" />
+  <bpmn:collaboration id="Collaboration_process_reservation">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_reservation_system" name="Système de réservation" processRef="pool_reservation_system_process" />
+    <bpmn:messageFlow id="flow_flight_to_process_flight" name="" sourceRef="task_reserve_flight" targetRef="task_process_flight" messageRef="Message_flow_flight_to_process_flight" />
+    <bpmn:messageFlow id="flow_process_flight_to_hotel" name="" sourceRef="task_process_flight" targetRef="task_reserve_hotel" messageRef="Message_flow_process_flight_to_hotel" />
+    <bpmn:messageFlow id="flow_hotel_to_process_hotel" name="" sourceRef="task_reserve_hotel" targetRef="task_process_hotel_tx" messageRef="Message_flow_hotel_to_process_hotel" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_reservation" name="Début de la réservation client">
+      <bpmn:outgoing>flow_start_to_flight</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_reserve_flight" name="Réserver un vol">
+      <bpmn:incoming>flow_start_to_flight</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:task id="task_reserve_hotel" name="Réserver un hôtel">
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_flight" name="" sourceRef="start_reservation" targetRef="task_reserve_flight">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_reservation_system_process" name="Système de réservation" isExecutable="true">
+    <bpmn:serviceTask id="task_process_flight" name="Traitement de la réservation de vol">
+      <bpmn:documentation>Le système valide et enregistre la réservation de vol.</bpmn:documentation>
+      <bpmn:outgoing>flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="task_process_hotel" name="Traitement de la réservation d&#x27;hôtel">
+      <bpmn:documentation>Le système valide et enregistre la réservation d&#x27;hôtel. GAP: connexion automatique de secours — rattaché automatiquement au flux principal depuis &#x27;task_process_flight&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_6</bpmn:incoming>
+      <bpmn:outgoing>flow_7</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="end_reservation_success" name="Réservations confirmées">
+      <bpmn:documentation>GAP: connexion automatique de secours — reçoit une transition de secours depuis &#x27;task_process_hotel&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_5</bpmn:incoming>
+      <bpmn:incoming>flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_reservation_system" name="Start Système de réservation">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:transaction id="tx_reservation" name="Transaction de réservation">
+      <bpmn:documentation>Sous-processus transactionnel pour gérer les réservations de vol et d&#x27;hôtel.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_5</bpmn:outgoing>
+      <bpmn:serviceTask id="task_process_flight_tx" name="Traitement de la réservation de vol">
+        <bpmn:incoming>flow_2</bpmn:incoming>
+        <bpmn:outgoing>flow_3</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="task_process_hotel_tx" name="Traitement de la réservation d&#x27;hôtel">
+        <bpmn:incoming>flow_3</bpmn:incoming>
+        <bpmn:outgoing>flow_process_hotel_to_end</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:startEvent id="start_tx_reservation" name="Début de la transaction">
+        <bpmn:outgoing>flow_2</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="end_tx_reservation" name="Fin de la transaction">
+        <bpmn:incoming>flow_process_hotel_to_end</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="flow_process_hotel_to_end" name="" sourceRef="task_process_hotel_tx" targetRef="end_tx_reservation">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_2" name="" sourceRef="start_tx_reservation" targetRef="task_process_flight_tx">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_3" name="" sourceRef="task_process_flight_tx" targetRef="task_process_hotel_tx">
+      </bpmn:sequenceFlow>
+    </bpmn:transaction>
+    <bpmn:boundaryEvent id="cancel_flight_reservation" name="Échec de la réservation d&#x27;hôtel" attachedToRef="tx_reservation" cancelActivity="true">
+      <bpmn:outgoing>flow_process_hotel_to_cancel_flight</bpmn:outgoing>
+      <bpmn:cancelEventDefinition id="cancel_flight_reservation_def">
+      </bpmn:cancelEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="task_cancel_flight" name="Annuler la réservation du vol" isForCompensation="true">
+      <bpmn:incoming>flow_process_hotel_to_cancel_flight</bpmn:incoming>
+      <bpmn:outgoing>flow_cancel_flight_to_end_cancelled</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reservation_cancelled" name="Réservation annulée (échec de l&#x27;hôtel)">
+      <bpmn:incoming>flow_cancel_flight_to_end_cancelled</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_reservation_system" targetRef="tx_reservation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_process_hotel_to_cancel_flight" name="" sourceRef="cancel_flight_reservation" targetRef="task_cancel_flight">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_cancel_flight_to_end_cancelled" name="" sourceRef="task_cancel_flight" targetRef="end_reservation_cancelled">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_5" name="" sourceRef="tx_reservation" targetRef="end_reservation_success">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_6" name="" sourceRef="task_process_flight" targetRef="task_process_hotel">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_7" name="" sourceRef="task_process_hotel" targetRef="end_reservation_success">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reservation">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1236" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_reservation_system_di" bpmnElement="pool_reservation_system" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="1236" height="622" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reservation_di" bpmnElement="start_reservation">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_reserve_flight_di" bpmnElement="task_reserve_flight">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_reserve_hotel_di" bpmnElement="task_reserve_hotel">
+        <dc:Bounds x="1036" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_process_flight_di" bpmnElement="task_process_flight">
+        <dc:Bounds x="876" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_process_hotel_di" bpmnElement="task_process_hotel">
+        <dc:Bounds x="1036" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reservation_success_di" bpmnElement="end_reservation_success">
+        <dc:Bounds x="876" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_reservation_system_di" bpmnElement="start_pool_reservation_system">
+        <dc:Bounds x="120" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="tx_reservation_di" bpmnElement="tx_reservation" isExpanded="true">
+        <dc:Bounds x="280" y="496" width="596" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_process_flight_tx_di" bpmnElement="task_process_flight_tx">
+        <dc:Bounds x="480" y="546" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_process_hotel_tx_di" bpmnElement="task_process_hotel_tx">
+        <dc:Bounds x="640" y="546" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_flight_reservation_di" bpmnElement="cancel_flight_reservation">
+        <dc:Bounds x="858" y="638" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_cancel_flight_di" bpmnElement="task_cancel_flight">
+        <dc:Bounds x="120" y="686" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reservation_cancelled_di" bpmnElement="end_reservation_cancelled">
+        <dc:Bounds x="280" y="796" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_tx_reservation_di" bpmnElement="start_tx_reservation">
+        <dc:Bounds x="320" y="546" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_tx_reservation_di" bpmnElement="end_tx_reservation">
+        <dc:Bounds x="800" y="546" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_flight_di" bpmnElement="flow_start_to_flight">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_process_hotel_to_end_di" bpmnElement="flow_process_hotel_to_end">
+        <di:waypoint x="740" y="586" />
+        <di:waypoint x="770" y="586" />
+        <di:waypoint x="770" y="564" />
+        <di:waypoint x="800" y="564" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="448" />
+        <di:waypoint x="218" y="448" />
+        <di:waypoint x="218" y="576" />
+        <di:waypoint x="280" y="576" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_process_hotel_to_cancel_flight_di" bpmnElement="flow_process_hotel_to_cancel_flight">
+        <di:waypoint x="876" y="674" />
+        <di:waypoint x="906" y="674" />
+        <di:waypoint x="906" y="786" />
+        <di:waypoint x="90" y="786" />
+        <di:waypoint x="90" y="726" />
+        <di:waypoint x="120" y="726" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_cancel_flight_to_end_cancelled_di" bpmnElement="flow_cancel_flight_to_end_cancelled">
+        <di:waypoint x="220" y="726" />
+        <di:waypoint x="250" y="726" />
+        <di:waypoint x="250" y="814" />
+        <di:waypoint x="280" y="814" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="356" y="564" />
+        <di:waypoint x="418" y="564" />
+        <di:waypoint x="418" y="586" />
+        <di:waypoint x="480" y="586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_3_di" bpmnElement="flow_3">
+        <di:waypoint x="580" y="586" />
+        <di:waypoint x="640" y="586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_5_di" bpmnElement="flow_5">
+        <di:waypoint x="876" y="576" />
+        <di:waypoint x="906" y="576" />
+        <di:waypoint x="906" y="636" />
+        <di:waypoint x="846" y="636" />
+        <di:waypoint x="846" y="514" />
+        <di:waypoint x="876" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_6_di" bpmnElement="flow_6">
+        <di:waypoint x="976" y="360" />
+        <di:waypoint x="1006" y="360" />
+        <di:waypoint x="1006" y="536" />
+        <di:waypoint x="1036" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_7_di" bpmnElement="flow_7">
+        <di:waypoint x="1136" y="536" />
+        <di:waypoint x="1166" y="536" />
+        <di:waypoint x="1166" y="596" />
+        <di:waypoint x="846" y="596" />
+        <di:waypoint x="846" y="514" />
+        <di:waypoint x="876" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_flight_to_process_flight_di" bpmnElement="flow_flight_to_process_flight">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="628" y="130" />
+        <di:waypoint x="628" y="360" />
+        <di:waypoint x="876" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_process_flight_to_hotel_di" bpmnElement="flow_process_flight_to_hotel">
+        <di:waypoint x="976" y="360" />
+        <di:waypoint x="1006" y="360" />
+        <di:waypoint x="1006" y="130" />
+        <di:waypoint x="1036" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_hotel_to_process_hotel_di" bpmnElement="flow_hotel_to_process_hotel">
+        <di:waypoint x="1136" y="130" />
+        <di:waypoint x="1166" y="130" />
+        <di:waypoint x="1166" y="646" />
+        <di:waypoint x="610" y="646" />
+        <di:waypoint x="610" y="586" />
+        <di:waypoint x="640" y="586" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

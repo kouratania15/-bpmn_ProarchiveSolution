@@ -1,0 +1,118 @@
+{
+  "process": {
+    "id": "process_support_ticket",
+    "name": "Processus de gestion de ticket de support",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_support",
+      "name": "Service Support",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_ticket_submitted",
+      "name": "Ticket soumis",
+      "type": "startEvent",
+      "poolId": "pool_support",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_support' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_ticket",
+      "name": "Soumet un ticket de support",
+      "type": "task",
+      "poolId": "pool_support",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_reply_ticket",
+      "name": "Répond au ticket",
+      "type": "task",
+      "poolId": "pool_support",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_reply_timeout",
+      "type": "exclusiveGateway",
+      "name": "Réponse dans les 24h ?",
+      "poolId": "pool_support",
+      "gatewayDirection": "diverging"
+    },
+    {
+      "id": "task_transfer_to_responsible",
+      "name": "Transfère au responsable",
+      "type": "task",
+      "poolId": "pool_support"
+    },
+    {
+      "id": "end_ticket_resolved",
+      "name": "Ticket résolu",
+      "type": "endEvent",
+      "poolId": "pool_support",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_support' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "timer_24h",
+      "type": "boundaryEvent",
+      "name": "Délai de réponse dépassé (24h)",
+      "poolId": "pool_support",
+      "attachedToRef": "task_reply_ticket",
+      "eventDefinition": "timer",
+      "eventDetail": "PT24H",
+      "cancelActivity": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "type": "sequenceFlow",
+      "source": "start_ticket_submitted",
+      "target": "task_submit_ticket",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_reply",
+      "type": "sequenceFlow",
+      "source": "task_submit_ticket",
+      "target": "gateway_reply_timeout",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_reply_to_end",
+      "source": "task_reply_ticket",
+      "target": "end_ticket_resolved",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_reply",
+      "type": "sequenceFlow",
+      "source": "gateway_reply_timeout",
+      "target": "task_reply_ticket",
+      "name": "Réponse envoyée"
+    },
+    {
+      "id": "flow_gateway_to_transfer",
+      "type": "sequenceFlow",
+      "source": "gateway_reply_timeout",
+      "target": "task_transfer_to_responsible",
+      "name": "Délai dépassé"
+    },
+    {
+      "id": "flow_transfer_to_end",
+      "type": "sequenceFlow",
+      "source": "task_transfer_to_responsible",
+      "target": "end_ticket_resolved"
+    },
+    {
+      "id": "flow_reply_to_timer",
+      "type": "sequenceFlow",
+      "source": "timer_24h",
+      "target": "task_transfer_to_responsible"
+    }
+  ]
+}

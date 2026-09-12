@@ -1,0 +1,90 @@
+{
+  "process": {
+    "id": "process_commande",
+    "name": "Processus de commande client",
+    "documentation": "Processus de commande client : un client passe une commande qui est confirmée par le système.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_systeme",
+      "name": "Système",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_commande",
+      "type": "startEvent",
+      "name": "Commande passée par le client",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_passer_commande",
+      "type": "task",
+      "name": "Passer une commande",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_confirmer_commande",
+      "type": "serviceTask",
+      "name": "Confirmer la commande",
+      "poolId": "pool_systeme",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_systeme' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_commande_confirmee",
+      "type": "endEvent",
+      "name": "Commande confirmée",
+      "eventDefinition": "none",
+      "poolId": "pool_systeme"
+    },
+    {
+      "id": "start_pool_systeme",
+      "type": "startEvent",
+      "name": "Start Système",
+      "poolId": "pool_systeme"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_commande",
+      "source": "start_commande",
+      "target": "task_passer_commande",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "flow_passer_confirmer",
+      "source": "task_passer_commande",
+      "target": "task_confirmer_commande",
+      "type": "messageFlow",
+      "name": "Demande de confirmation",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "flow_confirmer_end",
+      "source": "task_confirmer_commande",
+      "target": "end_commande_confirmee",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_systeme",
+      "target": "task_confirmer_commande",
+      "type": "sequenceFlow"
+    }
+  ]
+}

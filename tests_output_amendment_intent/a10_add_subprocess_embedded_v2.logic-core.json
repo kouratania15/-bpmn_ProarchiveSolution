@@ -1,0 +1,104 @@
+{
+  "process": {
+    "id": "process_reclamation",
+    "name": "Processus de réclamation client",
+    "isExecutable": true,
+    "documentation": "Processus de traitement d'une réclamation client par un agent. Le client soumet une réclamation qui est ensuite traitée par un agent, incluant désormais la vérification de l'historique, l'évaluation de validité et la proposition de compensation."
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reclamation",
+      "name": "Réclamation soumise",
+      "type": "startEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_soumet_reclamation",
+      "name": "Client soumet une réclamation",
+      "type": "task",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_agent_traitement",
+      "name": "Agent traite la réclamation",
+      "type": "task",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_verifier_historique",
+      "name": "Vérifier l'historique du client",
+      "type": "task",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_evaluer_validite",
+      "name": "Évaluer la validité de la réclamation",
+      "type": "task",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_proposer_compensation",
+      "name": "Proposer une compensation",
+      "type": "task",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "end_reclamation_traitee",
+      "name": "Réclamation traitée",
+      "type": "endEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_client",
+      "type": "sequenceFlow",
+      "source": "start_reclamation",
+      "target": "task_client_soumet_reclamation"
+    },
+    {
+      "id": "flow_client_agent",
+      "type": "sequenceFlow",
+      "source": "task_client_soumet_reclamation",
+      "target": "task_agent_traitement"
+    },
+    {
+      "id": "flow_agent_verifier_historique",
+      "type": "sequenceFlow",
+      "source": "task_agent_traitement",
+      "target": "task_verifier_historique"
+    },
+    {
+      "id": "flow_verifier_evaluer",
+      "type": "sequenceFlow",
+      "source": "task_verifier_historique",
+      "target": "task_evaluer_validite"
+    },
+    {
+      "id": "flow_evaluer_proposer",
+      "type": "sequenceFlow",
+      "source": "task_evaluer_validite",
+      "target": "task_proposer_compensation"
+    },
+    {
+      "id": "flow_proposer_end",
+      "type": "sequenceFlow",
+      "source": "task_proposer_compensation",
+      "target": "end_reclamation_traitee"
+    }
+  ]
+}

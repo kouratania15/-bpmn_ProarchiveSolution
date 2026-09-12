@@ -1,0 +1,104 @@
+{
+  "process": {
+    "id": "process_publishing",
+    "name": "Processus de publication d'article",
+    "documentation": "Processus de soumission, relecture et publication d'un article par un auteur et un éditeur."
+  },
+  "nodes": [
+    {
+      "id": "start_event_submission",
+      "type": "startEvent",
+      "name": "Soumission de l'article",
+      "eventDefinition": "none",
+      "documentation": "Déclenchement du processus par la soumission de l'article par l'auteur. GAP: connexion automatique de secours — assigné automatiquement au pool 'author_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "author_pool"
+    },
+    {
+      "id": "task_submit_article",
+      "type": "task",
+      "name": "Soumet un article",
+      "poolId": "author_pool",
+      "sourceProcessElement": "activity_1",
+      "documentation": "L'auteur soumet un article pour publication."
+    },
+    {
+      "id": "task_editor_review",
+      "type": "task",
+      "name": "Relit l'article",
+      "poolId": "editor_pool",
+      "sourceProcessElement": "activity_2",
+      "documentation": "L'éditeur relit l'article soumis par l'auteur. GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'editor_pool' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_publish_article",
+      "type": "task",
+      "name": "Publie l'article",
+      "poolId": "editor_pool",
+      "sourceProcessElement": "activity_3",
+      "documentation": "L'éditeur publie l'article après relecture."
+    },
+    {
+      "id": "end_event_published",
+      "type": "endEvent",
+      "name": "Article publié",
+      "eventDefinition": "none",
+      "documentation": "Fin du processus après publication de l'article. GAP: connexion automatique de secours — assigné automatiquement au pool 'editor_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "editor_pool"
+    },
+    {
+      "id": "start_editor_pool",
+      "type": "startEvent",
+      "name": "Start Éditeur",
+      "poolId": "editor_pool"
+    }
+  ],
+  "pools": [
+    {
+      "id": "author_pool",
+      "name": "Auteur",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "editor_pool",
+      "name": "Éditeur",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "source": "start_event_submission",
+      "target": "task_submit_article",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_review",
+      "source": "task_submit_article",
+      "target": "task_editor_review",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_review_to_publish",
+      "source": "task_editor_review",
+      "target": "task_publish_article",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_publish_to_end",
+      "source": "task_publish_article",
+      "target": "end_event_published",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_editor_pool",
+      "target": "task_editor_review",
+      "type": "sequenceFlow"
+    }
+  ]
+}

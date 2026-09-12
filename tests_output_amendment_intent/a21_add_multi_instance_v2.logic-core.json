@@ -1,0 +1,105 @@
+{
+  "process": {
+    "id": "process_evaluation",
+    "name": "Processus d'évaluation de projet",
+    "isExecutable": true,
+    "documentation": "Processus d'évaluation d'un projet soumis par un comité."
+  },
+  "pools": [
+    {
+      "id": "pool_comite",
+      "name": "Comité d'évaluation",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "name": "Début du processus d'évaluation",
+      "type": "startEvent",
+      "poolId": "pool_comite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_project",
+      "name": "Projet soumis pour évaluation",
+      "type": "task",
+      "poolId": "pool_comite",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_evaluate_project",
+      "name": "Évaluation du projet par le comité",
+      "type": "task",
+      "poolId": "pool_comite",
+      "loopCharacteristics": "multiInstanceParallel",
+      "loopCollection": "data_comite_membres",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "data_comite_membres",
+      "type": "dataObjectReference",
+      "name": "Liste des membres du comité",
+      "isCollection": true,
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "parallel_gateway_evaluation",
+      "type": "parallelGateway",
+      "name": "Démarrage des évaluations parallèles",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "end_event",
+      "name": "Évaluation terminée",
+      "type": "endEvent",
+      "poolId": "pool_comite",
+      "documentation": "Fin du processus d'évaluation GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "parallel_gateway_join",
+      "type": "parallelGateway",
+      "name": "Convergence des évaluations",
+      "gatewayDirection": "converging",
+      "poolId": "pool_comite"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "type": "sequenceFlow",
+      "source": "start_event",
+      "target": "task_submit_project",
+      "sourceProcessElement": "sequence_flows[0]"
+    },
+    {
+      "id": "flow_submit_to_evaluate",
+      "type": "sequenceFlow",
+      "source": "task_submit_project",
+      "target": "parallel_gateway_evaluation",
+      "sourceProcessElement": "sequence_flows[1]"
+    },
+    {
+      "id": "flow_evaluate_to_join",
+      "source": "parallel_gateway_evaluation",
+      "target": "task_evaluate_project",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_evaluate_to_join_end",
+      "source": "task_evaluate_project",
+      "target": "parallel_gateway_join",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_join_to_end",
+      "source": "parallel_gateway_join",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    }
+  ]
+}

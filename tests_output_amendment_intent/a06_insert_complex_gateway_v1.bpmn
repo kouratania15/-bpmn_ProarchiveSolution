@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_evaluation_projet"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_soumission_evaluation" name="flow_soumission_evaluation" />
+  <bpmn:collaboration id="Collaboration_process_evaluation_projet">
+    <bpmn:participant id="pool_comite" name="Comité d&#x27;évaluation" processRef="pool_comite_process" />
+    <bpmn:participant id="pool_demandeur" name="Demandeur (Projet)" processRef="pool_demandeur_process" />
+    <bpmn:messageFlow id="flow_soumission_evaluation" name="" sourceRef="task_soumission_projet" targetRef="task_evaluation_comite" messageRef="Message_flow_soumission_evaluation" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_comite_process" name="Comité d&#x27;évaluation" isExecutable="true">
+    <bpmn:task id="task_evaluation_comite" name="Évaluation et approbation du projet par le comité">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_comite&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_evaluation_approve</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_approve" name="Projet approuvé">
+      <bpmn:incoming>flow_evaluation_approve</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_comite" name="Start Comité d&#x27;évaluation">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_evaluation_approve" name="" sourceRef="task_evaluation_comite" targetRef="end_event_approve">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_comite" targetRef="task_evaluation_comite">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_demandeur_process" name="Demandeur (Projet)" isExecutable="true">
+    <bpmn:startEvent id="start_event" name="Début du processus d&#x27;évaluation">
+      <bpmn:outgoing>flow_start_soumission</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_soumission_projet" name="Soumission du projet pour évaluation">
+      <bpmn:incoming>flow_start_soumission</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_soumission" name="" sourceRef="start_event" targetRef="task_soumission_projet">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_evaluation_projet">
+      <bpmndi:BPMNShape id="pool_comite_di" bpmnElement="pool_comite" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="576" height="322" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_demandeur_di" bpmnElement="pool_demandeur" isHorizontal="true">
+        <dc:Bounds x="60" y="412" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="452" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_soumission_projet_di" bpmnElement="task_soumission_projet">
+        <dc:Bounds x="280" y="452" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluation_comite_di" bpmnElement="task_evaluation_comite">
+        <dc:Bounds x="280" y="222" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_approve_di" bpmnElement="end_event_approve">
+        <dc:Bounds x="440" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_comite_di" bpmnElement="start_pool_comite">
+        <dc:Bounds x="120" y="156" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_soumission_di" bpmnElement="flow_start_soumission">
+        <di:waypoint x="156" y="470" />
+        <di:waypoint x="218" y="470" />
+        <di:waypoint x="218" y="492" />
+        <di:waypoint x="280" y="492" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluation_approve_di" bpmnElement="flow_evaluation_approve">
+        <di:waypoint x="380" y="262" />
+        <di:waypoint x="410" y="262" />
+        <di:waypoint x="410" y="108" />
+        <di:waypoint x="440" y="108" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="174" />
+        <di:waypoint x="218" y="174" />
+        <di:waypoint x="218" y="262" />
+        <di:waypoint x="280" y="262" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumission_evaluation_di" bpmnElement="flow_soumission_evaluation">
+        <di:waypoint x="380" y="492" />
+        <di:waypoint x="410" y="492" />
+        <di:waypoint x="410" y="552" />
+        <di:waypoint x="250" y="552" />
+        <di:waypoint x="250" y="262" />
+        <di:waypoint x="280" y="262" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

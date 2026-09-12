@@ -1,0 +1,171 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "documentation": "Processus de recrutement où un candidat postule à une offre d'emploi, suivi d'une évaluation du CV par le recruteur et de décisions conditionnelles menant à différentes actions (entretien, réponse négative ou proposition d'un poste alternatif).",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_recruteur",
+      "name": "Entreprise (Recruteur)",
+      "lanes": []
+    },
+    {
+      "id": "pool_candidat",
+      "name": "Candidat"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "type": "startEvent",
+      "name": "Postulation reçue",
+      "eventDefinition": "none",
+      "poolId": "pool_candidat",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_postuler",
+      "type": "task",
+      "name": "Postuler à une offre d'emploi",
+      "poolId": "pool_candidat",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_examiner_cv",
+      "type": "task",
+      "name": "Examiner le CV",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_recruteur' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_decision_profil",
+      "type": "exclusiveGateway",
+      "name": "Correspondance du profil",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "gateway_1"
+    },
+    {
+      "id": "task_planifier_entretien",
+      "type": "task",
+      "name": "Planifier un entretien",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_envoyer_reponse_neg",
+      "type": "task",
+      "name": "Envoyer une réponse négative",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_proposer_poste_alternatif",
+      "type": "task",
+      "name": "Proposer un poste alternatif",
+      "poolId": "pool_recruteur",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "end_entretien_planifie",
+      "type": "endEvent",
+      "name": "Entretien planifié",
+      "eventDefinition": "none",
+      "poolId": "pool_recruteur"
+    },
+    {
+      "id": "end_reponse_negative",
+      "type": "endEvent",
+      "name": "Réponse négative envoyée",
+      "eventDefinition": "none",
+      "poolId": "pool_recruteur"
+    },
+    {
+      "id": "end_poste_alternatif_propose",
+      "type": "endEvent",
+      "name": "Poste alternatif proposé",
+      "eventDefinition": "none",
+      "poolId": "pool_recruteur"
+    },
+    {
+      "id": "start_pool_recruteur",
+      "type": "startEvent",
+      "name": "Start Entreprise (Recruteur)",
+      "poolId": "pool_recruteur"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_postuler",
+      "source": "start_recrutement",
+      "target": "task_postuler",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_postuler_examiner_cv",
+      "source": "task_postuler",
+      "target": "task_examiner_cv",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_examiner_cv_decision",
+      "source": "task_examiner_cv",
+      "target": "gateway_decision_profil",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_decision_perfect_match",
+      "source": "gateway_decision_profil",
+      "target": "task_planifier_entretien",
+      "type": "sequenceFlow",
+      "name": "Profil correspond parfaitement",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_planifier_entretien_end",
+      "source": "task_planifier_entretien",
+      "target": "end_entretien_planifie",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_decision_no_match",
+      "source": "gateway_decision_profil",
+      "target": "task_envoyer_reponse_neg",
+      "type": "sequenceFlow",
+      "name": "Profil ne correspond pas du tout",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_reponse_neg_end",
+      "source": "task_envoyer_reponse_neg",
+      "target": "end_reponse_negative",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_decision_partial_match",
+      "source": "gateway_decision_profil",
+      "target": "task_proposer_poste_alternatif",
+      "type": "sequenceFlow",
+      "name": "Profil correspond partiellement",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_poste_alternatif_end",
+      "source": "task_proposer_poste_alternatif",
+      "target": "end_poste_alternatif_propose",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_recruteur",
+      "target": "task_examiner_cv",
+      "type": "sequenceFlow"
+    }
+  ]
+}

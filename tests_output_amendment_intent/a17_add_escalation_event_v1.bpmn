@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_complaint_management"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_deposit_to_treat" name="flow_deposit_to_treat" />
+  <bpmn:collaboration id="Collaboration_process_complaint_management">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_service_client" name="Service Client" processRef="pool_service_client_process" />
+    <bpmn:messageFlow id="flow_deposit_to_treat" name="" sourceRef="task_deposit_complaint" targetRef="task_treat_complaint" messageRef="Message_flow_deposit_to_treat" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_event_complaint" name="Plainte déposée">
+      <bpmn:outgoing>flow_start_to_deposit</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_deposit_complaint" name="Déposer une plainte">
+      <bpmn:incoming>flow_start_to_deposit</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_deposit" name="" sourceRef="start_event_complaint" targetRef="task_deposit_complaint">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_service_client_process" name="Service Client" isExecutable="true">
+    <bpmn:task id="task_treat_complaint" name="Traiter la plainte">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_service_client&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_treat_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_complaint_handled" name="Plainte traitée">
+      <bpmn:incoming>flow_treat_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_service_client" name="Start Service Client">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_treat_to_end" name="" sourceRef="task_treat_complaint" targetRef="end_event_complaint_handled">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_service_client" targetRef="task_treat_complaint">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_complaint_management">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_service_client_di" bpmnElement="pool_service_client" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="576" height="322" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_complaint_di" bpmnElement="start_event_complaint">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_deposit_complaint_di" bpmnElement="task_deposit_complaint">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_treat_complaint_di" bpmnElement="task_treat_complaint">
+        <dc:Bounds x="280" y="452" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_complaint_handled_di" bpmnElement="end_event_complaint_handled">
+        <dc:Bounds x="440" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_service_client_di" bpmnElement="start_pool_service_client">
+        <dc:Bounds x="120" y="386" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_deposit_di" bpmnElement="flow_start_to_deposit">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_treat_to_end_di" bpmnElement="flow_treat_to_end">
+        <di:waypoint x="380" y="492" />
+        <di:waypoint x="410" y="492" />
+        <di:waypoint x="410" y="338" />
+        <di:waypoint x="440" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="404" />
+        <di:waypoint x="218" y="404" />
+        <di:waypoint x="218" y="492" />
+        <di:waypoint x="280" y="492" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_deposit_to_treat_di" bpmnElement="flow_deposit_to_treat">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="552" />
+        <di:waypoint x="250" y="552" />
+        <di:waypoint x="250" y="492" />
+        <di:waypoint x="280" y="492" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

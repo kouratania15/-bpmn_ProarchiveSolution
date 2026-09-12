@@ -1,0 +1,146 @@
+{
+  "process": {
+    "id": "process_support_ticket",
+    "name": "Processus de gestion de ticket de support",
+    "documentation": "Processus de gestion des tickets de support clients, incluant délai de réponse et escalade automatique.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise (Service Support)",
+      "lanes": [
+        {
+          "id": "lane_client",
+          "name": "Client"
+        },
+        {
+          "id": "lane_agent",
+          "name": "Agent Support"
+        },
+        {
+          "id": "lane_responsable",
+          "name": "Responsable Support"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_submit_ticket",
+      "type": "startEvent",
+      "name": "Ticket soumis",
+      "poolId": "pool_company",
+      "laneId": "lane_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_submit_ticket",
+      "type": "task",
+      "name": "Soumettre un ticket de support",
+      "poolId": "pool_company",
+      "laneId": "lane_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_agent_response",
+      "type": "task",
+      "name": "Répondre au ticket",
+      "poolId": "pool_company",
+      "laneId": "lane_agent",
+      "sourceProcessElement": "activity_2",
+      "documentation": "Répondre au ticket de support."
+    },
+    {
+      "id": "timer_event_timeout",
+      "type": "intermediateCatchEvent",
+      "name": "Délai de réponse dépassé (24h)",
+      "poolId": "pool_company",
+      "laneId": "lane_agent",
+      "eventDefinition": "timer",
+      "eventDetail": "PT24H",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_transfer_to_manager",
+      "type": "task",
+      "name": "Transférer le ticket au responsable",
+      "poolId": "pool_company",
+      "laneId": "lane_responsable",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_event_ticket_resolved",
+      "type": "endEvent",
+      "name": "Ticket résolu",
+      "poolId": "pool_company",
+      "laneId": "lane_agent",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_event_ticket_escalated",
+      "type": "endEvent",
+      "name": "Ticket escaladé au responsable",
+      "poolId": "pool_company",
+      "laneId": "lane_responsable"
+    },
+    {
+      "id": "task_agent_response_split_gw",
+      "type": "exclusiveGateway",
+      "name": "Réponse envoyée ou délai dépassé ?",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_company",
+      "laneId": "lane_agent"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "source": "start_event_submit_ticket",
+      "target": "task_submit_ticket",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_agent",
+      "source": "task_submit_ticket",
+      "target": "task_agent_response",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_agent_to_gw",
+      "source": "task_agent_response",
+      "target": "task_agent_response_split_gw",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_agent_to_timer",
+      "source": "task_agent_response_split_gw",
+      "target": "timer_event_timeout",
+      "type": "sequenceFlow",
+      "name": "Délai dépassé"
+    },
+    {
+      "id": "flow_timer_to_transfer",
+      "source": "timer_event_timeout",
+      "target": "task_transfer_to_manager",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_agent_to_resolved",
+      "source": "task_agent_response_split_gw",
+      "target": "end_event_ticket_resolved",
+      "type": "sequenceFlow",
+      "name": "Réponse envoyée"
+    },
+    {
+      "id": "flow_transfer_to_escalated",
+      "source": "task_transfer_to_manager",
+      "target": "end_event_ticket_escalated",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    }
+  ]
+}

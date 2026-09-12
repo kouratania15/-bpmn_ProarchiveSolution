@@ -1,0 +1,133 @@
+{
+  "process": {
+    "id": "process_commande",
+    "name": "Processus de commande client",
+    "isExecutable": true,
+    "documentation": "Processus de commande client : un client passe une commande qui est confirmée par le système."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_systeme",
+      "name": "Système",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_commande",
+      "name": "Commande passée par le client",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_passer_commande",
+      "name": "Passer une commande",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_confirmer_commande",
+      "name": "Confirmer la commande",
+      "type": "serviceTask",
+      "poolId": "pool_systeme",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_systeme' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_commande_confirmee",
+      "name": "Commande confirmée",
+      "type": "endEvent",
+      "poolId": "pool_systeme",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_systeme",
+      "name": "Start Système",
+      "type": "startEvent",
+      "poolId": "pool_systeme"
+    },
+    {
+      "id": "event_paiement_recu",
+      "name": "Paiement reçu",
+      "type": "intermediateCatchEvent",
+      "poolId": "pool_systeme",
+      "eventDefinition": "timer",
+      "eventDetail": "Paiement"
+    },
+    {
+      "id": "gateway_attente_choix",
+      "name": "Attente du choix client",
+      "type": "eventBasedGateway",
+      "poolId": "pool_systeme",
+      "gatewayDirection": "diverging"
+    },
+    {
+      "id": "end_commande_annulee",
+      "name": "Commande annulée",
+      "type": "endEvent",
+      "poolId": "pool_systeme",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_commande",
+      "type": "sequenceFlow",
+      "source": "start_commande",
+      "target": "task_passer_commande",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "flow_passer_confirmer",
+      "name": "Demande de confirmation",
+      "type": "messageFlow",
+      "source": "task_passer_commande",
+      "target": "task_confirmer_commande",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "flow_confirmer_gateway",
+      "type": "sequenceFlow",
+      "source": "task_confirmer_commande",
+      "target": "gateway_attente_choix",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "flow_gateway_paiement",
+      "type": "sequenceFlow",
+      "source": "gateway_attente_choix",
+      "target": "event_paiement_recu",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "flow_paiement_end",
+      "type": "sequenceFlow",
+      "source": "event_paiement_recu",
+      "target": "end_commande_confirmee",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "flow_gateway_annulation",
+      "type": "sequenceFlow",
+      "source": "gateway_attente_choix",
+      "target": "end_commande_annulee",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_systeme",
+      "target": "task_confirmer_commande"
+    }
+  ]
+}

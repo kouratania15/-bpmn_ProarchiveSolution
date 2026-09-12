@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_recrutement"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_postuler_examiner_cv" name="flow_postuler_examiner_cv" />
+  <bpmn:collaboration id="Collaboration_process_recrutement">
+    <bpmn:participant id="pool_recruteur" name="Entreprise (Recruteur)" processRef="pool_recruteur_process" />
+    <bpmn:participant id="pool_candidat" name="Candidat" processRef="pool_candidat_process" />
+    <bpmn:messageFlow id="flow_postuler_examiner_cv" name="" sourceRef="task_postuler" targetRef="task_examiner_cv" messageRef="Message_flow_postuler_examiner_cv" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_recruteur_process" name="Entreprise (Recruteur)" isExecutable="true">
+    <bpmn:task id="task_examiner_cv" name="Examiner le CV">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_recruteur&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_examiner_cv_decision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_decision_profil" name="Correspondance du profil">
+      <bpmn:incoming>flow_examiner_cv_decision</bpmn:incoming>
+      <bpmn:outgoing>flow_decision_perfect_match</bpmn:outgoing>
+      <bpmn:outgoing>flow_decision_no_match</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_planifier_entretien" name="Planifier un entretien">
+      <bpmn:incoming>flow_decision_perfect_match</bpmn:incoming>
+      <bpmn:outgoing>flow_planifier_entretien_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_envoyer_reponse_neg" name="Envoyer une réponse négative">
+      <bpmn:incoming>flow_decision_no_match</bpmn:incoming>
+      <bpmn:outgoing>flow_reponse_neg_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_entretien_planifie" name="Entretien planifié">
+      <bpmn:incoming>flow_planifier_entretien_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_reponse_negative" name="Réponse négative envoyée">
+      <bpmn:incoming>flow_reponse_neg_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_recruteur" name="Start Entreprise (Recruteur)">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_examiner_cv_decision" name="" sourceRef="task_examiner_cv" targetRef="gateway_decision_profil">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_perfect_match" name="Profil correspond parfaitement" sourceRef="gateway_decision_profil" targetRef="task_planifier_entretien">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_planifier_entretien_end" name="" sourceRef="task_planifier_entretien" targetRef="end_entretien_planifie">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_no_match" name="Profil ne correspond pas du tout" sourceRef="gateway_decision_profil" targetRef="task_envoyer_reponse_neg">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_reponse_neg_end" name="" sourceRef="task_envoyer_reponse_neg" targetRef="end_reponse_negative">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_recruteur" targetRef="task_examiner_cv">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_candidat_process" name="Candidat" isExecutable="true">
+    <bpmn:startEvent id="start_recrutement" name="Postulation reçue">
+      <bpmn:outgoing>flow_start_postuler</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_postuler" name="Postuler à une offre d&#x27;emploi">
+      <bpmn:incoming>flow_start_postuler</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_postuler" name="" sourceRef="start_recrutement" targetRef="task_postuler">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_recrutement">
+      <bpmndi:BPMNShape id="pool_recruteur_di" bpmnElement="pool_recruteur" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="896" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_candidat_di" bpmnElement="pool_candidat" isHorizontal="true">
+        <dc:Bounds x="60" y="456" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_recrutement_di" bpmnElement="start_recrutement">
+        <dc:Bounds x="120" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_postuler_di" bpmnElement="task_postuler">
+        <dc:Bounds x="280" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_examiner_cv_di" bpmnElement="task_examiner_cv">
+        <dc:Bounds x="280" y="266" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_decision_profil_di" bpmnElement="gateway_decision_profil">
+        <dc:Bounds x="440" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_planifier_entretien_di" bpmnElement="task_planifier_entretien">
+        <dc:Bounds x="600" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_envoyer_reponse_neg_di" bpmnElement="task_envoyer_reponse_neg">
+        <dc:Bounds x="600" y="266" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_entretien_planifie_di" bpmnElement="end_entretien_planifie">
+        <dc:Bounds x="760" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reponse_negative_di" bpmnElement="end_reponse_negative">
+        <dc:Bounds x="760" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_recruteur_di" bpmnElement="start_pool_recruteur">
+        <dc:Bounds x="120" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_postuler_di" bpmnElement="flow_start_postuler">
+        <di:waypoint x="156" y="514" />
+        <di:waypoint x="218" y="514" />
+        <di:waypoint x="218" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_examiner_cv_decision_di" bpmnElement="flow_examiner_cv_decision">
+        <di:waypoint x="380" y="306" />
+        <di:waypoint x="410" y="306" />
+        <di:waypoint x="410" y="115" />
+        <di:waypoint x="440" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_perfect_match_di" bpmnElement="flow_decision_perfect_match">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="130" />
+        <di:waypoint x="600" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="110" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_planifier_entretien_end_di" bpmnElement="flow_planifier_entretien_end">
+        <di:waypoint x="700" y="130" />
+        <di:waypoint x="730" y="130" />
+        <di:waypoint x="730" y="108" />
+        <di:waypoint x="760" y="108" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_no_match_di" bpmnElement="flow_decision_no_match">
+        <di:waypoint x="490" y="115" />
+        <di:waypoint x="545" y="115" />
+        <di:waypoint x="545" y="306" />
+        <di:waypoint x="600" y="306" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="286" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_reponse_neg_end_di" bpmnElement="flow_reponse_neg_end">
+        <di:waypoint x="700" y="306" />
+        <di:waypoint x="730" y="306" />
+        <di:waypoint x="730" y="218" />
+        <di:waypoint x="760" y="218" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="218" />
+        <di:waypoint x="218" y="218" />
+        <di:waypoint x="218" y="306" />
+        <di:waypoint x="280" y="306" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_postuler_examiner_cv_di" bpmnElement="flow_postuler_examiner_cv">
+        <di:waypoint x="380" y="536" />
+        <di:waypoint x="410" y="536" />
+        <di:waypoint x="410" y="596" />
+        <di:waypoint x="250" y="596" />
+        <di:waypoint x="250" y="306" />
+        <di:waypoint x="280" y="306" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

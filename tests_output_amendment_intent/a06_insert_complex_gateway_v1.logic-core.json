@@ -1,0 +1,86 @@
+{
+  "process": {
+    "id": "process_evaluation_projet",
+    "name": "Processus d'évaluation et d'approbation d'un projet",
+    "documentation": "Processus d'évaluation d'un projet soumis par un demandeur, suivi d'une approbation par le comité.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_comite",
+      "name": "Comité d'évaluation",
+      "lanes": []
+    },
+    {
+      "id": "pool_demandeur",
+      "name": "Demandeur (Projet)",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Début du processus d'évaluation",
+      "eventDefinition": "none",
+      "poolId": "pool_demandeur",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_soumission_projet",
+      "type": "task",
+      "name": "Soumission du projet pour évaluation",
+      "poolId": "pool_demandeur",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_evaluation_comite",
+      "type": "task",
+      "name": "Évaluation et approbation du projet par le comité",
+      "poolId": "pool_comite",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_comite' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_approve",
+      "type": "endEvent",
+      "name": "Projet approuvé",
+      "eventDefinition": "none",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "start_pool_comite",
+      "type": "startEvent",
+      "name": "Start Comité d'évaluation",
+      "poolId": "pool_comite"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_soumission",
+      "source": "start_event",
+      "target": "task_soumission_projet",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumission_evaluation",
+      "source": "task_soumission_projet",
+      "target": "task_evaluation_comite",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_evaluation_approve",
+      "source": "task_evaluation_comite",
+      "target": "end_event_approve",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_comite",
+      "target": "task_evaluation_comite",
+      "type": "sequenceFlow"
+    }
+  ]
+}

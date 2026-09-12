@@ -1,0 +1,87 @@
+{
+  "process": {
+    "id": "process_transfer_funds",
+    "name": "Transfert d'argent entre comptes bancaires",
+    "documentation": "Processus de transfert d'argent initié par un client et traité par la banque. Le client transfère de l'argent entre deux comptes bancaires, et la banque traite le transfert.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_bank",
+      "name": "Banque",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_transfer",
+      "type": "startEvent",
+      "name": "Début du transfert",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_transfer",
+      "type": "task",
+      "name": "Transférer de l'argent entre deux comptes",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_bank_process",
+      "type": "task",
+      "name": "Traiter le transfert",
+      "poolId": "pool_bank",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_bank' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_transfer",
+      "type": "endEvent",
+      "name": "Transfert traité avec succès",
+      "eventDefinition": "none",
+      "poolId": "pool_bank"
+    },
+    {
+      "id": "start_pool_bank",
+      "type": "startEvent",
+      "name": "Start Banque",
+      "poolId": "pool_bank"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_client_transfer",
+      "source": "start_transfer",
+      "target": "task_client_transfer",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_client_transfer_to_bank_process",
+      "source": "task_client_transfer",
+      "target": "task_bank_process",
+      "type": "messageFlow",
+      "name": "Demande de transfert",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_bank_process_to_end",
+      "source": "task_bank_process",
+      "target": "end_transfer",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_bank",
+      "target": "task_bank_process",
+      "type": "sequenceFlow"
+    }
+  ]
+}

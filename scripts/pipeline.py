@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from bpmn_xml import generate_bpmn_xml
 from layout import compute_layout
 from llm_agent import (
+    extract_amendment_intent,
     extract_logic_core,
     extract_structured_analysis,
     build_process_description,
@@ -57,7 +59,37 @@ from src.utils.logger import (
     set_final_experiment_summary,
 )
 from src.utils.trace import print_trace
-from validate import validate_logic_core, validate_process_description
+from validate import (
+    check_amendment_diff_size_warning,
+    validate_amendment_diff,
+    validate_logic_core,
+    validate_process_description,
+)
+
+
+@dataclass
+class PipelineResult:
+    """Résultat d'un run_pipeline() réussi. Remplace l'ancien tuple (xml_str,
+    logic_core) : ajoute `warnings` (GAPs et avertissements non bloquants,
+    déjà calculés en interne par validate_logic_core mais jusqu'ici jamais
+    remontés à l'appelant) — nécessaire pour construire une réponse API/chat
+    sans dupliquer la logique de validation."""
+    xml: str
+    logic_core: dict[str, Any]
+    warnings: list[str]
+
+
+class PipelineValidationError(RuntimeError):
+    """Levée à la place d'un ValueError brut quand le Logic-Core final reste
+    invalide après épuisement des tentatives de self-healing. Le message
+    texte (str(exc)) est strictement identique à l'ancien comportement CLI ;
+    `.errors` et `.warnings` exposent en plus les listes structurées de
+    validate.ValidationResult pour un appelant programmatique (API web) qui a
+    besoin de plus qu'un message déjà concaténé."""
+    def __init__(self, message: str, errors: list[str], warnings: list[str]):
+        super().__init__(message)
+        self.errors = errors
+        self.warnings = warnings
 
 
 def _logic_core_ids(logic_core: dict[str, Any]) -> set[str]:
@@ -86,9 +118,24 @@ def _illegitimate_missing_ids(existing_logic_core: dict[str, Any], new_logic_cor
     retirer les flux devenus invalides quand un nœud est explicitement
     supprimé (ex: "retire l'envoi du SMS" -> la tâche SMS ET ses deux
     sequenceFlow adjacents disparaissent ensemble, ce qui est correct). Un
-    edge dont les DEUX extrémités existent toujours dans le nouveau graphe,
-    mais qui a lui-même disparu ou a été renommé, reste suspect — c'est le
-    pattern de renommage arbitraire que ce garde-fou vise à empêcher."""
+    edge dont les DEUX extrémités existent toujours dans le nouveau graphe est
+    légitime si un nœud TOUT NOUVEAU (absent du graphe d'origine, ex: un
+    gateway de décision) a été inséré directement sur cette connexion — cas
+    très courant d'un amendement du type "ajoute une vérification entre X et
+    Y" (ex: insérer une boucle de correction entre relecture et publication),
+    qui remplace naturellement le lien direct par deux nouveaux liens sans
+    qu'aucun des deux nœuds d'origine ne disparaisse. Un edge dont les DEUX
+    extrémités existent toujours ET dont aucun nœud nouveau ne s'est inséré
+    sur cette connexion précise reste suspect — c'est le pattern de renommage
+    arbitraire que ce garde-fou vise à empêcher.
+
+    Symétriquement, un NŒUD disparu est légitime si TOUS les edges qui le
+    touchaient (source ou target) dans le graphe D'ORIGINE ont eux-mêmes
+    disparu du nouveau graphe : c'est une branche entière retirée de façon
+    cohérente (ex: "la demande est directement rejetée" retire la tâche de
+    validation ET ses deux flux adjacents ensemble). Si au moins un de ces
+    edges persiste dans le nouveau graphe, il pointerait vers un nœud qui
+    n'existe plus (référence pendante) — un vrai oubli, qui reste suspect."""
     missing = _logic_core_ids(existing_logic_core) - _logic_core_ids(new_logic_core)
     if not missing:
         return missing
@@ -97,14 +144,53 @@ def _illegitimate_missing_ids(existing_logic_core: dict[str, Any], new_logic_cor
         e.get("id"): e for e in existing_logic_core.get("edges", [])
         if isinstance(e, dict) and isinstance(e.get("id"), str)
     }
+    new_edge_ids = {
+        e.get("id") for e in new_logic_core.get("edges", [])
+        if isinstance(e, dict) and isinstance(e.get("id"), str)
+    }
+    existing_node_ids = {
+        n.get("id") for n in existing_logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str)
+    }
+    incident_edges_by_node: dict[str, list[dict[str, Any]]] = {}
+    for e in existing_logic_core.get("edges", []):
+        if not isinstance(e, dict):
+            continue
+        for endpoint in (e.get("source"), e.get("target")):
+            if isinstance(endpoint, str):
+                incident_edges_by_node.setdefault(endpoint, []).append(e)
+
+    newly_added_node_ids = {
+        n.get("id") for n in new_logic_core.get("nodes", [])
+        if isinstance(n, dict) and isinstance(n.get("id"), str)
+    } - existing_node_ids
+    new_edge_targets_by_source: dict[str, set[str]] = {}
+    new_edge_sources_by_target: dict[str, set[str]] = {}
+    for e in new_logic_core.get("edges", []):
+        if not isinstance(e, dict):
+            continue
+        s, t = e.get("source"), e.get("target")
+        if isinstance(s, str) and isinstance(t, str):
+            new_edge_targets_by_source.setdefault(s, set()).add(t)
+            new_edge_sources_by_target.setdefault(t, set()).add(s)
+
     illegitimate: set[str] = set()
     for mid in missing:
         edge = existing_edges_by_id.get(mid)
-        if edge is None:
-            illegitimate.add(mid)  # pas un edge (nœud/pool/lane/process) : toujours suspect
+        if edge is not None:
+            src, tgt = edge.get("source"), edge.get("target")
+            if src in new_ids and tgt in new_ids:
+                spliced_neighbors = new_edge_targets_by_source.get(src, set()) | new_edge_sources_by_target.get(tgt, set())
+                if not (spliced_neighbors & newly_added_node_ids):
+                    illegitimate.add(mid)
             continue
-        if edge.get("source") in new_ids and edge.get("target") in new_ids:
+        if mid in existing_node_ids:
+            incident_edges = incident_edges_by_node.get(mid, [])
+            if all(e.get("id") not in new_edge_ids for e in incident_edges):
+                continue  # branche cohérente retirée : légitime
             illegitimate.add(mid)
+            continue
+        illegitimate.add(mid)  # pool/lane/process : toujours suspect
     return illegitimate
 
 
@@ -115,7 +201,7 @@ def run_pipeline(
     max_heal_attempts: int = MAX_SELF_HEALING_ATTEMPTS,
     verbose: bool = True,
     model: str = DEFAULT_MODEL,
-) -> tuple[str, dict[str, Any]]:
+) -> PipelineResult:
     """
     Exécute le cycle complet d'extraction, validation avec self-healing, layout et génération XML.
     """
@@ -144,15 +230,53 @@ def run_pipeline(
             log_event(run_id, ActionType.DEBUG, "process_description_validation",
                       "success" if pd_result.ok else "failed", output=pd_result.to_dict(), errors=pd_result.errors or None)
             if not pd_result.ok:
-                raise ValueError(f"Process Description structurel invalide : {pd_result.errors}")
+                raise PipelineValidationError(
+                    f"Process Description structurel invalide : {pd_result.errors}",
+                    errors=pd_result.errors, warnings=[],
+                )
             logic_core = direct_logic_core
             if verbose:
                 print_trace(1, total_steps, "Compilation contrôlée d'un Logic-Core existant")
         elif existing_logic_core is not None:
             if not user_text:
-                raise ValueError("Aucune modification fournie pour l'amendement.")
+                raise PipelineValidationError(
+                    "Aucune modification fournie pour l'amendement.",
+                    errors=["Aucune modification fournie pour l'amendement."], warnings=[],
+                )
             if verbose:
                 print_trace(1, total_steps, "Amendement incrémental du Logic-Core existant")
+            # Étape [A] de l'architecture d'amendement : classifie l'opération demandée AVANT
+            # de l'appliquer (symétrique au Process Description de la génération initiale),
+            # plutôt que de laisser un unique appel LLM aller directement du texte au nouveau
+            # Logic-Core sans jamais formaliser quelle opération est en jeu — cause racine de
+            # plusieurs bugs déjà observés (gateway inventé sur une insertion purement
+            # séquentielle, type hérité à tort lors d'un remplacement). Appelée UNE SEULE fois
+            # : l'intention ne change pas selon les retries de perte d'ID ci-dessous, seul le
+            # rappel textuel envoyé à extract_logic_core change. Un échec de cette
+            # classification (Mistral, JSON malformé) ne doit jamais faire échouer tout
+            # l'amendement : repli silencieux sur le comportement précédent (intent=None).
+            intent: dict[str, Any] | None = None
+            try:
+                intent = extract_amendment_intent(user_text, existing_logic_core, run_id=run_id, model=model)
+                append_execution_trace(run_id, {
+                    "step": 1,
+                    "component": "llm_agent.extract_amendment_intent",
+                    "action": "AMENDMENT_INTENT_CLASSIFIED",
+                    "intent": intent,
+                })
+                if verbose:
+                    print_trace(1, total_steps, f"Intention classifiée : {intent.get('operation_type')}")
+            except Exception as intent_exc:
+                append_execution_trace(run_id, {
+                    "step": 1,
+                    "component": "llm_agent.extract_amendment_intent",
+                    "action": "AMENDMENT_INTENT_FAILED",
+                    "error": str(intent_exc),
+                })
+                if verbose:
+                    print_trace(1, total_steps,
+                                 f"Classification de l'intention indisponible ({intent_exc}) — "
+                                 "poursuite sans intention structurée", "WARNING")
             # L'amendement est un appel LLM unique et stochastique : une tentative
             # peut, par malchance, ignorer la consigne "conserve les IDs existants"
             # et régénérer un Logic-Core sans rapport avec l'original (observé en
@@ -166,7 +290,7 @@ def run_pipeline(
             prev_missing_ids: set[str] | None = None
             stable_missing = False
             for amend_attempt in range(1, MAX_AMENDMENT_RETRIES + 1):
-                logic_core = extract_logic_core(amend_instruction, existing_logic_core, run_id=run_id, model=model)
+                logic_core = extract_logic_core(amend_instruction, existing_logic_core, run_id=run_id, model=model, intent=intent)
                 missing_ids = _illegitimate_missing_ids(existing_logic_core, logic_core)
                 if not missing_ids:
                     break
@@ -200,10 +324,11 @@ def run_pipeline(
                         f"impérativement cette fois-ci, inchangés : {sorted(missing_ids)}"
                     )
             if missing_ids and not stable_missing:
-                raise ValueError(
+                message = (
                     f"L'amendement a supprimé des IDs existants après {MAX_AMENDMENT_RETRIES} tentatives : "
                     f"{sorted(missing_ids)}"
                 )
+                raise PipelineValidationError(message, errors=[message], warnings=[])
             if missing_ids and stable_missing:
                 append_execution_trace(run_id, {
                     "step": 1,
@@ -218,7 +343,10 @@ def run_pipeline(
                                  f"acceptée : {sorted(missing_ids)}", "WARNING")
         else:
             if not user_text:
-                raise ValueError("Aucun texte fourni pour l'extraction.")
+                raise PipelineValidationError(
+                    "Aucun texte fourni pour l'extraction.",
+                    errors=["Aucun texte fourni pour l'extraction."], warnings=[],
+                )
             if verbose:
                 print_trace(1, total_steps, "Génération du Process Description")
             analysis = extract_structured_analysis(user_text, run_id=run_id, model=model)
@@ -250,7 +378,10 @@ def run_pipeline(
                 )
                 pd_result = validate_process_description(process_desc)
             if not pd_result.ok:
-                raise ValueError(f"Process Description invalide après {pd_attempt} corrections : {pd_result.errors}")
+                raise PipelineValidationError(
+                    f"Process Description invalide après {pd_attempt} corrections : {pd_result.errors}",
+                    errors=pd_result.errors, warnings=[],
+                )
             if verbose:
                 print_trace(3, total_steps, "Génération du Logic-Core depuis le Process Description")
             logic_core = generate_logic_core_from_pd(process_desc, run_id=run_id, model=model)
@@ -274,6 +405,28 @@ def run_pipeline(
             })
             logic_core = val_res.normalized_logic_core
             logic_core = dict(logic_core)
+
+        # Étape [D] de l'architecture d'amendement : compare l'ancien Logic-Core, le nouveau
+        # (après normalisation, celui réellement destiné à l'export), et l'intention déclarée
+        # en [A] — détecte les écarts entre ce qui a été DEMANDÉ et ce qui a été RÉELLEMENT
+        # produit, en complément des règles de soundness BPMN génériques de [C] ci-dessus.
+        # Uniquement en mode amendement (existing_logic_core fourni) et si [A] a réussi.
+        if existing_logic_core is not None and intent is not None:
+            diff_errors = validate_amendment_diff(existing_logic_core, logic_core, intent)
+            diff_warnings = check_amendment_diff_size_warning(existing_logic_core, logic_core, intent)
+            if diff_errors:
+                val_res.errors = list(val_res.errors) + diff_errors
+                val_res.ok = False
+            if diff_warnings:
+                val_res.warnings = list(val_res.warnings) + diff_warnings
+            if diff_errors or diff_warnings:
+                append_execution_trace(run_id, {
+                    "step": 2,
+                    "component": "validate.validate_amendment_diff",
+                    "action": "AMENDMENT_DIFF_VALIDATED",
+                    "errors": diff_errors,
+                    "warnings": diff_warnings,
+                })
 
         log_event(
             run_id, ActionType.DEBUG, "logic_core_validation",
@@ -301,6 +454,7 @@ def run_pipeline(
         prev_error_count = len(val_res.errors)
         stopped_no_progress = False
         regenerated_once = False
+        amendment_no_progress_once = False
         while not val_res.ok and attempt < max_heal_attempts and direct_logic_core is None:
             attempt += 1
             if verbose:
@@ -349,10 +503,11 @@ def run_pipeline(
                     break
                 prev_heal_missing_ids = missing_ids
                 if id_retry >= MAX_AMENDMENT_RETRIES:
-                    raise ValueError(
+                    message = (
                         f"Le self-healing a supprime des IDs existants après {MAX_AMENDMENT_RETRIES} "
                         f"tentatives : {sorted(missing_ids)}"
                     )
+                    raise PipelineValidationError(message, errors=[message], warnings=[])
                 if verbose:
                     print_trace(5, total_steps,
                                  f"Self-healing a supprimé des IDs existants — nouvelle tentative "
@@ -436,6 +591,23 @@ def run_pipeline(
                     prev_error_count = len(val_res.errors)
                     continue
 
+                # En mode amendement, aucune régénération complète n'est possible
+                # (pas de process_desc à régénérer) : sans ce garde-fou, une seule
+                # tentative sans progrès suffit à abandonner, alors même qu'un
+                # rappel de correction ciblé (ex: GATEWAY-002) vient d'être ajouté
+                # au prompt et n'a pas encore eu la chance de s'appliquer. Même
+                # principe que pour la perte d'IDs ailleurs dans cette fonction :
+                # un seul hasard défavorable ne suffit pas, deux tentatives
+                # consécutives sans amélioration confirment un vrai blocage.
+                if existing_logic_core is not None and not amendment_no_progress_once:
+                    amendment_no_progress_once = True
+                    if verbose:
+                        print_trace(5, total_steps,
+                                     f"Self-healing sans progrès à la tentative {attempt} — une dernière "
+                                     "tentative avant abandon", "WARNING")
+                    prev_error_count = len(val_res.errors)
+                    continue
+
                 stopped_no_progress = True
                 append_execution_trace(run_id, {
                     "step": 4,
@@ -455,7 +627,10 @@ def run_pipeline(
         if not val_res.ok:
             set_final_experiment_summary(run_id, business_summary, status="FAILED")
             reason = "aucune amélioration détectée entre deux tentatives" if stopped_no_progress else f"{attempt} corrections"
-            raise ValueError(f"Logic-Core invalide apres {reason} : {val_res.errors}")
+            raise PipelineValidationError(
+                f"Logic-Core invalide apres {reason} : {val_res.errors}",
+                errors=val_res.errors, warnings=val_res.warnings,
+            )
 
         # Les avertissements (non bloquants : GAPs métier, données mentionnées dans
         # le texte mais absentes du Logic-Core, etc.) étaient calculés par le
@@ -479,7 +654,7 @@ def run_pipeline(
             print_trace(8, total_steps, "Processus termine", "SUCCESS")
         set_final_experiment_summary(run_id, business_summary, status="SUCCESS")
         finalize_run(run_id, "success")
-        return xml_str, logic_core
+        return PipelineResult(xml=xml_str, logic_core=logic_core, warnings=val_res.warnings)
     except Exception:
         finalize_run(run_id, "failed")
         raise
@@ -540,7 +715,7 @@ def main():
     max_heal = 0 if args.no_heal else MAX_SELF_HEALING_ATTEMPTS
 
     try:
-        xml_content, logic_core = run_pipeline(
+        pipeline_result = run_pipeline(
             user_text=user_text,
             existing_logic_core=existing,
             direct_logic_core=direct_json,
@@ -548,6 +723,7 @@ def main():
             verbose=verbose,
             model=args.model,
         )
+        xml_content, logic_core = pipeline_result.xml, pipeline_result.logic_core
 
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)

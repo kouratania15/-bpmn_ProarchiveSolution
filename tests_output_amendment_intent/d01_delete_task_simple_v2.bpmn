@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_order_client"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_order_email" name="flow_order_email" />
+  <bpmn:collaboration id="Collaboration_process_order_client">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_system" name="Système" processRef="pool_system_process" />
+    <bpmn:messageFlow id="flow_order_email" name="" sourceRef="task_client_order" targetRef="task_send_email" messageRef="Message_flow_order_email" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_order" name="Début de la commande client">
+      <bpmn:outgoing>flow_start_order</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_client_order" name="Commande un produit">
+      <bpmn:incoming>flow_start_order</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_order" name="" sourceRef="start_order" targetRef="task_client_order">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_system_process" name="Système" isExecutable="true">
+    <bpmn:sendTask id="task_send_email" name="Envoie un email de confirmation">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_system&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_email_shipping</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:task id="task_shipping_order" name="Expédie la commande">
+      <bpmn:incoming>flow_email_shipping</bpmn:incoming>
+      <bpmn:outgoing>flow_shipping_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_order" name="Commande expédiée">
+      <bpmn:incoming>flow_shipping_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_system" name="Start Système">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_email_shipping" name="" sourceRef="task_send_email" targetRef="task_shipping_order">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_shipping_end" name="" sourceRef="task_shipping_order" targetRef="end_order">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_system" targetRef="task_send_email">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_order_client">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_system_di" bpmnElement="pool_system" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="736" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_order_di" bpmnElement="start_order">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_client_order_di" bpmnElement="task_client_order">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_send_email_di" bpmnElement="task_send_email">
+        <dc:Bounds x="280" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_shipping_order_di" bpmnElement="task_shipping_order">
+        <dc:Bounds x="440" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_order_di" bpmnElement="end_order">
+        <dc:Bounds x="600" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_system_di" bpmnElement="start_pool_system">
+        <dc:Bounds x="120" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_order_di" bpmnElement="flow_start_order">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_email_shipping_di" bpmnElement="flow_email_shipping">
+        <di:waypoint x="380" y="536" />
+        <di:waypoint x="410" y="536" />
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="440" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_shipping_end_di" bpmnElement="flow_shipping_end">
+        <di:waypoint x="540" y="360" />
+        <di:waypoint x="570" y="360" />
+        <di:waypoint x="570" y="338" />
+        <di:waypoint x="600" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="448" />
+        <di:waypoint x="218" y="448" />
+        <di:waypoint x="218" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_order_email_di" bpmnElement="flow_order_email">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="596" />
+        <di:waypoint x="250" y="596" />
+        <di:waypoint x="250" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

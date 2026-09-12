@@ -1,0 +1,67 @@
+{
+  "process": {
+    "id": "process_quality_service",
+    "name": "Processus de détection et correction de défauts par le Service Qualité",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_service_qualite",
+      "name": "Service Qualité",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_detect_defect",
+      "type": "startEvent",
+      "name": "Détection d'un défaut sur un lot de production",
+      "eventDefinition": "none",
+      "sourceProcessElement": "activity_1",
+      "poolId": "pool_service_qualite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_qualite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_detect_defect",
+      "type": "task",
+      "name": "Détecter un défaut sur un lot de production",
+      "poolId": "pool_service_qualite",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_correct_defect",
+      "type": "task",
+      "name": "Corriger le défaut",
+      "poolId": "pool_service_qualite",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_process_completed",
+      "type": "endEvent",
+      "name": "Processus de correction terminé",
+      "eventDefinition": "none",
+      "poolId": "pool_service_qualite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_service_qualite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_detect",
+      "source": "start_detect_defect",
+      "target": "task_detect_defect",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_detect_correct",
+      "source": "task_detect_defect",
+      "target": "task_correct_defect",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_correct_end",
+      "source": "task_correct_defect",
+      "target": "end_process_completed",
+      "type": "sequenceFlow"
+    }
+  ]
+}

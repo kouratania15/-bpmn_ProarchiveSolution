@@ -1,0 +1,102 @@
+{
+  "process": {
+    "id": "process_order_client",
+    "name": "Processus de commande client",
+    "isExecutable": true,
+    "documentation": "Un client commande un produit. Le système envoie un email de confirmation avant d'expédier la commande."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_system",
+      "name": "Système",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_order",
+      "name": "Début de la commande client",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_order",
+      "name": "Commande un produit",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_send_email",
+      "name": "Envoie un email de confirmation",
+      "type": "sendTask",
+      "poolId": "pool_system",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_system' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_shipping_order",
+      "name": "Expédie la commande",
+      "type": "task",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_order",
+      "name": "Commande expédiée",
+      "type": "endEvent",
+      "poolId": "pool_system",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_system",
+      "name": "Start Système",
+      "type": "startEvent",
+      "poolId": "pool_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_order",
+      "type": "sequenceFlow",
+      "source": "start_order",
+      "target": "task_client_order",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_order_email",
+      "type": "messageFlow",
+      "source": "task_client_order",
+      "target": "task_send_email",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_email_shipping",
+      "type": "sequenceFlow",
+      "source": "task_send_email",
+      "target": "task_shipping_order",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_shipping_end",
+      "type": "sequenceFlow",
+      "source": "task_shipping_order",
+      "target": "end_order"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_system",
+      "target": "task_send_email"
+    }
+  ]
+}

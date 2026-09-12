@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_support_ticket"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_support_ticket">
+    <bpmn:participant id="pool_support" name="Service Support" processRef="process_support_ticket" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_support_ticket" name="Service Support" isExecutable="true">
+    <bpmn:startEvent id="start_ticket_submitted" name="Ticket soumis">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_support&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_to_submit</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_submit_ticket" name="Soumet un ticket de support">
+      <bpmn:incoming>flow_start_to_submit</bpmn:incoming>
+      <bpmn:outgoing>flow_submit_to_reply</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_reply_ticket" name="Répond au ticket">
+      <bpmn:incoming>flow_submit_to_reply</bpmn:incoming>
+      <bpmn:outgoing>flow_reply_to_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_ticket_resolved" name="Ticket résolu">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_support&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_reply_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_to_submit" name="" sourceRef="start_ticket_submitted" targetRef="task_submit_ticket">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_submit_to_reply" name="" sourceRef="task_submit_ticket" targetRef="task_reply_ticket">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_reply_to_end" name="" sourceRef="task_reply_ticket" targetRef="end_ticket_resolved">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_support_ticket">
+      <bpmndi:BPMNShape id="pool_support_di" bpmnElement="pool_support" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="736" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_ticket_submitted_di" bpmnElement="start_ticket_submitted">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_submit_ticket_di" bpmnElement="task_submit_ticket">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_reply_ticket_di" bpmnElement="task_reply_ticket">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_ticket_resolved_di" bpmnElement="end_ticket_resolved">
+        <dc:Bounds x="600" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_submit_di" bpmnElement="flow_start_to_submit">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_submit_to_reply_di" bpmnElement="flow_submit_to_reply">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_reply_to_end_di" bpmnElement="flow_reply_to_end">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="570" y="130" />
+        <di:waypoint x="570" y="108" />
+        <di:waypoint x="600" y="108" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,141 @@
+{
+  "process": {
+    "id": "process_reclamation",
+    "name": "Processus de traitement de réclamation",
+    "documentation": "Processus de gestion d'une réclamation client, incluant vérification, évaluation et proposition de compensation."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_entreprise",
+      "name": "Entreprise",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reclamation",
+      "type": "startEvent",
+      "name": "Réclamation soumise",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_soumet_reclamation",
+      "type": "task",
+      "name": "Soumettre une réclamation",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_traiter_reclamation",
+      "type": "subProcess",
+      "name": "Traiter la réclamation",
+      "poolId": "pool_entreprise",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_verifier_historique",
+      "type": "task",
+      "name": "Vérifier l'historique du client",
+      "poolId": "pool_entreprise",
+      "parentSubProcessId": "task_traiter_reclamation",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_evaluer_validite",
+      "type": "task",
+      "name": "Évaluer la validité de la réclamation",
+      "poolId": "pool_entreprise",
+      "parentSubProcessId": "task_traiter_reclamation",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_proposer_compensation",
+      "type": "task",
+      "name": "Proposer une compensation",
+      "poolId": "pool_entreprise",
+      "parentSubProcessId": "task_traiter_reclamation",
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "start_traiter_reclamation",
+      "type": "startEvent",
+      "name": "Début du traitement de la réclamation",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise",
+      "parentSubProcessId": "task_traiter_reclamation"
+    },
+    {
+      "id": "end_traiter_reclamation",
+      "type": "endEvent",
+      "name": "Traitement de la réclamation terminé",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise",
+      "parentSubProcessId": "task_traiter_reclamation"
+    },
+    {
+      "id": "end_reclamation_traitement",
+      "type": "endEvent",
+      "name": "Réclamation traitée et compensation proposée",
+      "eventDefinition": "none",
+      "poolId": "pool_entreprise"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_reclamation",
+      "source": "start_reclamation",
+      "target": "task_soumet_reclamation",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumet_traiter",
+      "source": "task_soumet_reclamation",
+      "target": "task_traiter_reclamation",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_start_verifier",
+      "source": "start_traiter_reclamation",
+      "target": "task_verifier_historique",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_verifier_evaluer",
+      "source": "task_verifier_historique",
+      "target": "task_evaluer_validite",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_evaluer_compenser",
+      "source": "task_evaluer_validite",
+      "target": "task_proposer_compensation",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_compenser_end",
+      "source": "task_proposer_compensation",
+      "target": "end_traiter_reclamation",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "none"
+    },
+    {
+      "id": "flow_end_reclamation",
+      "source": "task_traiter_reclamation",
+      "target": "end_reclamation_traitement",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "none"
+    }
+  ]
+}

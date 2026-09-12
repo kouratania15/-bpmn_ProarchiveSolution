@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_transfer_funds"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_client_transfer_to_bank_process" name="Demande de transfert" />
+  <bpmn:collaboration id="Collaboration_process_transfer_funds">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_bank" name="Banque" processRef="pool_bank_process" />
+    <bpmn:messageFlow id="flow_client_transfer_to_bank_process" name="Demande de transfert" sourceRef="task_client_transfer" targetRef="subprocess_transfer" messageRef="Message_flow_client_transfer_to_bank_process" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_transfer" name="Début du transfert">
+      <bpmn:outgoing>flow_start_to_client_transfer</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_client_transfer" name="Transférer de l&#x27;argent entre deux comptes">
+      <bpmn:incoming>flow_start_to_client_transfer</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_to_client_transfer" name="" sourceRef="start_transfer" targetRef="task_client_transfer">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_bank_process" name="Banque" isExecutable="true">
+    <bpmn:transaction id="subprocess_transfer" name="Transfert bancaire">
+      <bpmn:documentation>Sous-processus transactionnel pour le transfert bancaire</bpmn:documentation>
+      <bpmn:incoming>flow_start_pool_bank_to_subprocess_transfer</bpmn:incoming>
+      <bpmn:outgoing>flow_subprocess_transfer_to_end_transfer</bpmn:outgoing>
+      <bpmn:task id="task_debit_account" name="Débit du compte source">
+        <bpmn:incoming>flow_start_subprocess_transfer_to_debit_account</bpmn:incoming>
+        <bpmn:outgoing>flow_debit_to_credit</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_credit_account" name="Crédit du compte destination">
+        <bpmn:incoming>flow_debit_to_credit</bpmn:incoming>
+        <bpmn:outgoing>flow_credit_to_end_subprocess_transfer</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:startEvent id="start_subprocess_transfer" name="Début du transfert bancaire">
+        <bpmn:outgoing>flow_start_subprocess_transfer_to_debit_account</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="end_subprocess_transfer" name="Fin du transfert bancaire">
+        <bpmn:incoming>flow_credit_to_end_subprocess_transfer</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="flow_start_subprocess_transfer_to_debit_account" name="" sourceRef="start_subprocess_transfer" targetRef="task_debit_account">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_debit_to_credit" name="" sourceRef="task_debit_account" targetRef="task_credit_account">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_credit_to_end_subprocess_transfer" name="" sourceRef="task_credit_account" targetRef="end_subprocess_transfer">
+      </bpmn:sequenceFlow>
+    </bpmn:transaction>
+    <bpmn:task id="task_annuler_credit" name="Annuler le crédit du compte destination" isForCompensation="true">
+      <bpmn:outgoing>flow_annuler_credit_to_end_transfer</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="cancel_transfer" name="Échec du débit du compte source" attachedToRef="subprocess_transfer" cancelActivity="true">
+      <bpmn:outgoing>flow_cancel_transfer_to_throw_compensation</bpmn:outgoing>
+      <bpmn:cancelEventDefinition id="cancel_transfer_def">
+      </bpmn:cancelEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateThrowEvent id="throw_compensation" name="Événement de compensation">
+      <bpmn:incoming>flow_cancel_transfer_to_throw_compensation</bpmn:incoming>
+      <bpmn:outgoing>flow_throw_compensation_to_end_transfer</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="throw_compensation_def">
+      </bpmn:compensateEventDefinition>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="end_transfer" name="Transfert traité avec succès">
+      <bpmn:incoming>flow_subprocess_transfer_to_end_transfer</bpmn:incoming>
+      <bpmn:incoming>flow_annuler_credit_to_end_transfer</bpmn:incoming>
+      <bpmn:incoming>flow_throw_compensation_to_end_transfer</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_bank" name="Start Banque">
+      <bpmn:outgoing>flow_start_pool_bank_to_subprocess_transfer</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_start_pool_bank_to_subprocess_transfer" name="" sourceRef="start_pool_bank" targetRef="subprocess_transfer">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_subprocess_transfer_to_end_transfer" name="" sourceRef="subprocess_transfer" targetRef="end_transfer">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_cancel_transfer_to_throw_compensation" name="" sourceRef="cancel_transfer" targetRef="throw_compensation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_annuler_credit_to_end_transfer" name="" sourceRef="task_annuler_credit" targetRef="end_transfer">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_throw_compensation_to_end_transfer" name="" sourceRef="throw_compensation" targetRef="end_transfer">
+    </bpmn:sequenceFlow>
+    <bpmn:association id="flow_compensation_to_annuler_credit" sourceRef="throw_compensation" targetRef="task_annuler_credit" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_transfer_funds">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_bank_di" bpmnElement="pool_bank" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="976" height="512" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_transfer_di" bpmnElement="start_transfer">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_client_transfer_di" bpmnElement="task_client_transfer">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="subprocess_transfer_di" bpmnElement="subprocess_transfer" isExpanded="true">
+        <dc:Bounds x="280" y="496" width="596" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_debit_account_di" bpmnElement="task_debit_account">
+        <dc:Bounds x="480" y="546" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_credit_account_di" bpmnElement="task_credit_account">
+        <dc:Bounds x="640" y="546" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_annuler_credit_di" bpmnElement="task_annuler_credit">
+        <dc:Bounds x="120" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_transfer_di" bpmnElement="cancel_transfer">
+        <dc:Bounds x="858" y="638" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="throw_compensation_di" bpmnElement="throw_compensation">
+        <dc:Bounds x="120" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_subprocess_transfer_di" bpmnElement="start_subprocess_transfer">
+        <dc:Bounds x="320" y="546" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_subprocess_transfer_di" bpmnElement="end_subprocess_transfer">
+        <dc:Bounds x="800" y="546" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_transfer_di" bpmnElement="end_transfer">
+        <dc:Bounds x="280" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_bank_di" bpmnElement="start_pool_bank">
+        <dc:Bounds x="120" y="686" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_client_transfer_di" bpmnElement="flow_start_to_client_transfer">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_start_pool_bank_to_subprocess_transfer_di" bpmnElement="flow_start_pool_bank_to_subprocess_transfer">
+        <di:waypoint x="156" y="704" />
+        <di:waypoint x="218" y="704" />
+        <di:waypoint x="218" y="576" />
+        <di:waypoint x="280" y="576" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_start_subprocess_transfer_to_debit_account_di" bpmnElement="flow_start_subprocess_transfer_to_debit_account">
+        <di:waypoint x="356" y="564" />
+        <di:waypoint x="418" y="564" />
+        <di:waypoint x="418" y="586" />
+        <di:waypoint x="480" y="586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_debit_to_credit_di" bpmnElement="flow_debit_to_credit">
+        <di:waypoint x="580" y="586" />
+        <di:waypoint x="640" y="586" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_credit_to_end_subprocess_transfer_di" bpmnElement="flow_credit_to_end_subprocess_transfer">
+        <di:waypoint x="740" y="586" />
+        <di:waypoint x="770" y="586" />
+        <di:waypoint x="770" y="564" />
+        <di:waypoint x="800" y="564" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_subprocess_transfer_to_end_transfer_di" bpmnElement="flow_subprocess_transfer_to_end_transfer">
+        <di:waypoint x="876" y="576" />
+        <di:waypoint x="906" y="576" />
+        <di:waypoint x="906" y="636" />
+        <di:waypoint x="250" y="636" />
+        <di:waypoint x="250" y="448" />
+        <di:waypoint x="280" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_cancel_transfer_to_throw_compensation_di" bpmnElement="flow_cancel_transfer_to_throw_compensation">
+        <di:waypoint x="876" y="674" />
+        <di:waypoint x="906" y="674" />
+        <di:waypoint x="906" y="734" />
+        <di:waypoint x="90" y="734" />
+        <di:waypoint x="90" y="514" />
+        <di:waypoint x="120" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_annuler_credit_to_end_transfer_di" bpmnElement="flow_annuler_credit_to_end_transfer">
+        <di:waypoint x="220" y="360" />
+        <di:waypoint x="250" y="360" />
+        <di:waypoint x="250" y="448" />
+        <di:waypoint x="280" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_throw_compensation_to_end_transfer_di" bpmnElement="flow_throw_compensation_to_end_transfer">
+        <di:waypoint x="156" y="514" />
+        <di:waypoint x="218" y="514" />
+        <di:waypoint x="218" y="448" />
+        <di:waypoint x="280" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_client_transfer_to_bank_process_di" bpmnElement="flow_client_transfer_to_bank_process">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="636" />
+        <di:waypoint x="250" y="636" />
+        <di:waypoint x="250" y="576" />
+        <di:waypoint x="280" y="576" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="230" y="616" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_compensation_to_annuler_credit_di" bpmnElement="flow_compensation_to_annuler_credit">
+        <di:waypoint x="156" y="514" />
+        <di:waypoint x="186" y="514" />
+        <di:waypoint x="186" y="574" />
+        <di:waypoint x="90" y="574" />
+        <di:waypoint x="90" y="360" />
+        <di:waypoint x="120" y="360" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

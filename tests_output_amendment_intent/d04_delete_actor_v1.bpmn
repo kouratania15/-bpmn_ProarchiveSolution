@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reservation_chambre"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_reserver_confirmer" name="Demande de confirmation" />
+  <bpmn:collaboration id="Collaboration_process_reservation_chambre">
+    <bpmn:participant id="pool_hotel" name="Hôtel" processRef="pool_hotel_process" />
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:messageFlow id="flow_reserver_confirmer" name="Demande de confirmation" sourceRef="task_reserver_chambre" targetRef="task_confirmer_reservation" messageRef="Message_flow_reserver_confirmer" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_hotel_process" name="Hôtel" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_reception" name="Réception">
+        <bpmn:flowNodeRef>task_confirmer_reservation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_menage" name="Service ménage">
+        <bpmn:flowNodeRef>task_preparer_chambre</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:task id="task_confirmer_reservation" name="Confirmer la réservation">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_hotel&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_confirmer_preparer</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_preparer_chambre" name="Préparer la chambre">
+      <bpmn:incoming>flow_confirmer_preparer</bpmn:incoming>
+      <bpmn:outgoing>flow_preparer_finaliser</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_reservation_finalisee" name="Réservation finalisée et chambre prête">
+      <bpmn:incoming>flow_preparer_finaliser</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_hotel" name="Start Hôtel">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_confirmer_preparer" name="Préparation de la chambre" sourceRef="task_confirmer_reservation" targetRef="task_preparer_chambre">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_preparer_finaliser" name="Chambre prête" sourceRef="task_preparer_chambre" targetRef="end_reservation_finalisee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_hotel" targetRef="task_confirmer_reservation">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_reservation" name="Réservation client">
+      <bpmn:outgoing>flow_start_reserver</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_reserver_chambre" name="Réserver une chambre d&#x27;hôtel">
+      <bpmn:incoming>flow_start_reserver</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_reserver" name="" sourceRef="start_reservation" targetRef="task_reserver_chambre">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reservation_chambre">
+      <bpmndi:BPMNShape id="pool_hotel_di" bpmnElement="pool_hotel" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="900" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="470" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_reception_di" bpmnElement="lane_reception" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_menage_di" bpmnElement="lane_menage" isHorizontal="true">
+        <dc:Bounds x="90" y="240" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reservation_di" bpmnElement="start_reservation">
+        <dc:Bounds x="120" y="510" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_reserver_chambre_di" bpmnElement="task_reserver_chambre">
+        <dc:Bounds x="280" y="510" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_confirmer_reservation_di" bpmnElement="task_confirmer_reservation">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_preparer_chambre_di" bpmnElement="task_preparer_chambre">
+        <dc:Bounds x="440" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reservation_finalisee_di" bpmnElement="end_reservation_finalisee">
+        <dc:Bounds x="600" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_hotel_di" bpmnElement="start_pool_hotel">
+        <dc:Bounds x="120" y="166" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_reserver_di" bpmnElement="flow_start_reserver">
+        <di:waypoint x="156" y="528" />
+        <di:waypoint x="218" y="528" />
+        <di:waypoint x="218" y="550" />
+        <di:waypoint x="280" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_confirmer_preparer_di" bpmnElement="flow_confirmer_preparer">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="320" />
+        <di:waypoint x="440" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="390" y="300" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_preparer_finaliser_di" bpmnElement="flow_preparer_finaliser">
+        <di:waypoint x="540" y="320" />
+        <di:waypoint x="570" y="320" />
+        <di:waypoint x="570" y="98" />
+        <di:waypoint x="600" y="98" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="550" y="78" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="184" />
+        <di:waypoint x="218" y="184" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_reserver_confirmer_di" bpmnElement="flow_reserver_confirmer">
+        <di:waypoint x="380" y="550" />
+        <di:waypoint x="410" y="550" />
+        <di:waypoint x="410" y="610" />
+        <di:waypoint x="250" y="610" />
+        <di:waypoint x="250" y="130" />
+        <di:waypoint x="280" y="130" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="230" y="590" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

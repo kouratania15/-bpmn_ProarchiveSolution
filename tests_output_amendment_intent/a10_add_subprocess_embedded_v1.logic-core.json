@@ -1,0 +1,68 @@
+{
+  "process": {
+    "id": "process_reclamation",
+    "name": "Processus de réclamation client",
+    "documentation": "Processus de traitement d'une réclamation client par un agent. Le client soumet une réclamation qui est ensuite traitée par un agent.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reclamation",
+      "type": "startEvent",
+      "name": "Réclamation soumise",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_client_soumet_reclamation",
+      "type": "task",
+      "name": "Client soumet une réclamation",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_agent_traitement",
+      "type": "task",
+      "name": "Agent traite la réclamation",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_reclamation_traitee",
+      "type": "endEvent",
+      "name": "Réclamation traitée",
+      "eventDefinition": "none",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_client",
+      "source": "start_reclamation",
+      "target": "task_client_soumet_reclamation",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_client_agent",
+      "source": "task_client_soumet_reclamation",
+      "target": "task_agent_traitement",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_agent_end",
+      "source": "task_agent_traitement",
+      "target": "end_reclamation_traitee",
+      "type": "sequenceFlow"
+    }
+  ]
+}

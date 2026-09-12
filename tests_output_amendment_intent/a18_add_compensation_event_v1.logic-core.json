@@ -1,0 +1,121 @@
+{
+  "process": {
+    "id": "process_reservation",
+    "name": "Réservation client (vol + hôtel)",
+    "documentation": "Processus de réservation d'un vol et d'un hôtel par un client via un système de réservation centralisé."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_reservation_system",
+      "name": "Système de réservation",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reservation",
+      "type": "startEvent",
+      "name": "Début de la réservation client",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_reserve_flight",
+      "type": "task",
+      "name": "Réserver un vol",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_reserve_hotel",
+      "type": "task",
+      "name": "Réserver un hôtel",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_process_flight",
+      "type": "serviceTask",
+      "name": "Traitement de la réservation de vol",
+      "poolId": "pool_reservation_system",
+      "documentation": "Le système valide et enregistre la réservation de vol. GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_reservation_system' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_process_hotel",
+      "type": "serviceTask",
+      "name": "Traitement de la réservation d'hôtel",
+      "poolId": "pool_reservation_system",
+      "documentation": "Le système valide et enregistre la réservation d'hôtel.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_reservation_success",
+      "type": "endEvent",
+      "name": "Réservations confirmées",
+      "eventDefinition": "none",
+      "poolId": "pool_reservation_system",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "start_pool_reservation_system",
+      "type": "startEvent",
+      "name": "Start Système de réservation",
+      "poolId": "pool_reservation_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_flight",
+      "source": "start_reservation",
+      "target": "task_reserve_flight",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_flight_to_process_flight",
+      "source": "task_reserve_flight",
+      "target": "task_process_flight",
+      "type": "messageFlow",
+      "name": "Demande de réservation de vol",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_process_flight_to_hotel",
+      "source": "task_process_flight",
+      "target": "task_reserve_hotel",
+      "type": "messageFlow",
+      "name": "Suite de la réservation",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_hotel_to_process_hotel",
+      "source": "task_reserve_hotel",
+      "target": "task_process_hotel",
+      "type": "messageFlow",
+      "name": "Demande de réservation d'hôtel",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_process_hotel_to_end",
+      "source": "task_process_hotel",
+      "target": "end_reservation_success",
+      "type": "sequenceFlow",
+      "name": "Réservations finalisées"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_reservation_system",
+      "target": "task_process_flight",
+      "type": "sequenceFlow"
+    }
+  ]
+}

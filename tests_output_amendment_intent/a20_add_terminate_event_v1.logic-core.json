@@ -1,0 +1,90 @@
+{
+  "process": {
+    "id": "process_command",
+    "name": "Processus de commande client",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_system",
+      "name": "Système",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_command",
+      "type": "startEvent",
+      "name": "Commande passée",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_client' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_client_place_order",
+      "type": "task",
+      "name": "Passer une commande",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_system_process_order",
+      "type": "task",
+      "name": "Traiter la commande",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_system' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_command_processed",
+      "type": "endEvent",
+      "name": "Commande traitée",
+      "eventDefinition": "none",
+      "poolId": "pool_system",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_system' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_system",
+      "type": "startEvent",
+      "name": "Start Système",
+      "poolId": "pool_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_client",
+      "source": "start_command",
+      "target": "task_client_place_order",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_client_to_system",
+      "source": "task_client_place_order",
+      "target": "task_system_process_order",
+      "type": "messageFlow",
+      "name": "Commande envoyée au système",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_system_to_end",
+      "source": "task_system_process_order",
+      "target": "end_command_processed",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_system",
+      "target": "task_system_process_order",
+      "type": "sequenceFlow"
+    }
+  ]
+}

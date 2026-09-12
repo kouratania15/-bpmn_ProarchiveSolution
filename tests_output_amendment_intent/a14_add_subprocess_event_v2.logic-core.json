@@ -1,0 +1,141 @@
+{
+  "process": {
+    "id": "process_livraison_colis",
+    "name": "Processus de livraison du colis",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_transporteur",
+      "name": "Transporteur",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_livraison",
+      "name": "Début de la livraison du colis",
+      "type": "startEvent",
+      "poolId": "pool_transporteur",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "task_colis_en_cours",
+      "name": "Colis en cours de livraison",
+      "type": "task",
+      "poolId": "pool_transporteur"
+    },
+    {
+      "id": "task_livraison_transporteur",
+      "name": "Livraison du colis par le transporteur",
+      "type": "task",
+      "poolId": "pool_transporteur"
+    },
+    {
+      "id": "end_livraison_terminee",
+      "name": "Livraison du colis terminée",
+      "type": "endEvent",
+      "poolId": "pool_transporteur",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "subprocess_annulation",
+      "name": "Annulation de la commande",
+      "type": "subProcess",
+      "poolId": "pool_transporteur",
+      "triggeredByEvent": true
+    },
+    {
+      "id": "start_annulation",
+      "name": "Annulation de la commande par le client",
+      "type": "startEvent",
+      "poolId": "pool_transporteur",
+      "eventDefinition": "message",
+      "parentSubProcessId": "subprocess_annulation"
+    },
+    {
+      "id": "task_retour_colis",
+      "name": "Retour du colis à l'entrepôt",
+      "type": "task",
+      "poolId": "pool_transporteur",
+      "parentSubProcessId": "subprocess_annulation"
+    },
+    {
+      "id": "end_annulation",
+      "name": "Annulation de la commande terminée",
+      "type": "endEvent",
+      "poolId": "pool_transporteur",
+      "eventDefinition": "none",
+      "parentSubProcessId": "subprocess_annulation"
+    },
+    {
+      "id": "boundary_annulation",
+      "name": "Annulation de la commande",
+      "type": "boundaryEvent",
+      "attachedToRef": "task_colis_en_cours",
+      "eventDefinition": "message",
+      "cancelActivity": true,
+      "poolId": "pool_transporteur"
+    },
+    {
+      "id": "start_subprocess_annulation",
+      "name": "Début du sous-processus d'annulation",
+      "type": "startEvent",
+      "eventDefinition": "none",
+      "poolId": "pool_transporteur",
+      "parentSubProcessId": "subprocess_annulation"
+    },
+    {
+      "id": "end_subprocess_annulation",
+      "name": "Fin du sous-processus d'annulation",
+      "type": "endEvent",
+      "eventDefinition": "none",
+      "poolId": "pool_transporteur",
+      "parentSubProcessId": "subprocess_annulation"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_colis",
+      "type": "sequenceFlow",
+      "source": "start_livraison",
+      "target": "task_colis_en_cours"
+    },
+    {
+      "id": "flow_colis_livraison",
+      "type": "sequenceFlow",
+      "source": "task_colis_en_cours",
+      "target": "task_livraison_transporteur"
+    },
+    {
+      "id": "flow_livraison_end",
+      "type": "sequenceFlow",
+      "source": "task_livraison_transporteur",
+      "target": "end_livraison_terminee"
+    },
+    {
+      "id": "flow_annulation_boundary",
+      "type": "sequenceFlow",
+      "source": "boundary_annulation",
+      "target": "subprocess_annulation"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_annulation",
+      "target": "task_retour_colis",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_retour_end",
+      "source": "task_retour_colis",
+      "target": "end_annulation",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_subprocess_start_end",
+      "source": "start_subprocess_annulation",
+      "target": "end_subprocess_annulation",
+      "type": "sequenceFlow"
+    }
+  ]
+}

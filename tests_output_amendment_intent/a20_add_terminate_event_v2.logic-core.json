@@ -1,0 +1,115 @@
+{
+  "process": {
+    "id": "process_command",
+    "name": "Processus de commande client",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_system",
+      "name": "Système",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_command",
+      "name": "Commande passée",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_client' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_place_order",
+      "name": "Passer une commande",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_system_process_order",
+      "name": "Traiter la commande",
+      "type": "task",
+      "poolId": "pool_system",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_system' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_command_processed",
+      "name": "Commande traitée",
+      "type": "endEvent",
+      "poolId": "pool_system",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_system' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_system",
+      "name": "Start Système",
+      "type": "startEvent",
+      "poolId": "pool_system"
+    },
+    {
+      "id": "task_client_cancel_order",
+      "name": "Client annule la commande",
+      "type": "task",
+      "poolId": "pool_client"
+    },
+    {
+      "id": "end_terminate_process",
+      "name": "Processus arrêté immédiatement",
+      "type": "endEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "terminate"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_client",
+      "type": "sequenceFlow",
+      "source": "start_command",
+      "target": "task_client_place_order",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_client_to_cancel",
+      "type": "sequenceFlow",
+      "source": "task_client_place_order",
+      "target": "task_client_cancel_order"
+    },
+    {
+      "id": "flow_cancel_to_terminate",
+      "type": "sequenceFlow",
+      "source": "task_client_cancel_order",
+      "target": "end_terminate_process"
+    },
+    {
+      "id": "flow_client_to_system",
+      "name": "Commande envoyée au système",
+      "type": "messageFlow",
+      "source": "task_client_place_order",
+      "target": "task_system_process_order",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_system_to_end",
+      "type": "sequenceFlow",
+      "source": "task_system_process_order",
+      "target": "end_command_processed"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_system",
+      "target": "task_system_process_order"
+    }
+  ]
+}

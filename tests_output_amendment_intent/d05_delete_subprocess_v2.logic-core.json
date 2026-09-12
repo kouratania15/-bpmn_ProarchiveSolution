@@ -1,0 +1,86 @@
+{
+  "process": {
+    "id": "process_reclamation",
+    "name": "Processus de traitement de réclamation",
+    "documentation": "Processus de gestion d'une réclamation client, incluant transmission directe au service juridique."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_entreprise",
+      "name": "Entreprise",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reclamation",
+      "name": "Réclamation soumise",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_soumet_reclamation",
+      "name": "Soumettre une réclamation",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_traiter_reclamation",
+      "name": "Transmettre la réclamation au service juridique",
+      "type": "task",
+      "poolId": "pool_entreprise",
+      "sourceProcessElement": "activity_2",
+      "documentation": "Transmission directe au service juridique sans évaluation préalable."
+    },
+    {
+      "id": "end_reclamation_traitement",
+      "name": "Réclamation transmise au service juridique",
+      "type": "endEvent",
+      "poolId": "pool_entreprise",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_entreprise",
+      "type": "startEvent",
+      "name": "Start Entreprise",
+      "poolId": "pool_entreprise"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_reclamation",
+      "type": "sequenceFlow",
+      "source": "start_reclamation",
+      "target": "task_soumet_reclamation",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumet_traiter",
+      "type": "messageFlow",
+      "source": "task_soumet_reclamation",
+      "target": "task_traiter_reclamation",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_end_reclamation",
+      "type": "sequenceFlow",
+      "source": "task_traiter_reclamation",
+      "target": "end_reclamation_traitement",
+      "sourceProcessElement": "none"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_entreprise",
+      "target": "task_traiter_reclamation",
+      "type": "sequenceFlow"
+    }
+  ]
+}

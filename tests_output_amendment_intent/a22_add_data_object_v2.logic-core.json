@@ -1,0 +1,103 @@
+{
+  "process": {
+    "id": "process_vendor_registration",
+    "name": "Processus d'enregistrement des fournisseurs",
+    "isExecutable": true,
+    "documentation": "Processus d'enregistrement initial des fournisseurs : soumission des données et vérification d'enregistrement existant."
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise (Gestionnaire)",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "name": "Début du processus de soumission des données d'enregistrement",
+      "type": "startEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_vendor_submits_data",
+      "name": "Soumet ses données d'enregistrement",
+      "type": "task",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_check_registration",
+      "name": "Vérifie si le fournisseur est déjà enregistré",
+      "type": "task",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "gateway_new_vendor",
+      "name": "Fournisseur nouveau ?",
+      "type": "exclusiveGateway",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "task_register_new_vendor",
+      "name": "Enregistre le fournisseur en utilisant les données du fournisseur",
+      "type": "task",
+      "poolId": "pool_company"
+    },
+    {
+      "id": "end_event",
+      "name": "Fin du processus de vérification d'enregistrement",
+      "type": "endEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "type": "sequenceFlow",
+      "source": "start_event",
+      "target": "task_vendor_submits_data",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_check",
+      "type": "sequenceFlow",
+      "source": "task_vendor_submits_data",
+      "target": "task_check_registration",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_check_to_gateway",
+      "type": "sequenceFlow",
+      "source": "task_check_registration",
+      "target": "gateway_new_vendor"
+    },
+    {
+      "id": "flow_gateway_to_register",
+      "source": "gateway_new_vendor",
+      "target": "task_register_new_vendor",
+      "type": "sequenceFlow",
+      "name": "Nouveau"
+    },
+    {
+      "id": "flow_register_to_end",
+      "source": "task_register_new_vendor",
+      "target": "end_event",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_end",
+      "source": "gateway_new_vendor",
+      "target": "end_event",
+      "type": "sequenceFlow",
+      "name": "Déjà enregistré"
+    }
+  ]
+}

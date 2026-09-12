@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_depot_et_expedition_colis"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_deposer_scanner" name="Colis déposé" />
+  <bpmn:collaboration id="Collaboration_process_depot_et_expedition_colis">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_agent" name="Agent" processRef="pool_agent_process" />
+    <bpmn:messageFlow id="flow_deposer_scanner" name="Colis déposé" sourceRef="task_deposer_colis" targetRef="task_scanner_colis" messageRef="Message_flow_deposer_scanner" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_event_depot" name="Début du processus de dépôt et expédition de colis">
+      <bpmn:outgoing>flow_start_deposer</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_deposer_colis" name="Déposer un colis">
+      <bpmn:incoming>flow_start_deposer</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_deposer" name="" sourceRef="start_event_depot" targetRef="task_deposer_colis">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_agent_process" name="Agent" isExecutable="true">
+    <bpmn:task id="task_scanner_colis" name="Scanner le colis">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_agent&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_scanner_expedier</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_expedier_colis" name="Expédier le colis">
+      <bpmn:incoming>flow_scanner_expedier</bpmn:incoming>
+      <bpmn:outgoing>flow_expedier_fin</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_fin" name="Fin du processus d&#x27;expédition">
+      <bpmn:incoming>flow_expedier_fin</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_agent" name="Start Agent">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_scanner_expedier" name="" sourceRef="task_scanner_colis" targetRef="task_expedier_colis">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_expedier_fin" name="" sourceRef="task_expedier_colis" targetRef="end_event_fin">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_agent" targetRef="task_scanner_colis">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_depot_et_expedition_colis">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_agent_di" bpmnElement="pool_agent" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="736" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_depot_di" bpmnElement="start_event_depot">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_deposer_colis_di" bpmnElement="task_deposer_colis">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_scanner_colis_di" bpmnElement="task_scanner_colis">
+        <dc:Bounds x="280" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_expedier_colis_di" bpmnElement="task_expedier_colis">
+        <dc:Bounds x="440" y="320" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_fin_di" bpmnElement="end_event_fin">
+        <dc:Bounds x="600" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_agent_di" bpmnElement="start_pool_agent">
+        <dc:Bounds x="120" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_deposer_di" bpmnElement="flow_start_deposer">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_scanner_expedier_di" bpmnElement="flow_scanner_expedier">
+        <di:waypoint x="380" y="536" />
+        <di:waypoint x="410" y="536" />
+        <di:waypoint x="410" y="360" />
+        <di:waypoint x="440" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_expedier_fin_di" bpmnElement="flow_expedier_fin">
+        <di:waypoint x="540" y="360" />
+        <di:waypoint x="570" y="360" />
+        <di:waypoint x="570" y="338" />
+        <di:waypoint x="600" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="448" />
+        <di:waypoint x="218" y="448" />
+        <di:waypoint x="218" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_deposer_scanner_di" bpmnElement="flow_deposer_scanner">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="596" />
+        <di:waypoint x="250" y="596" />
+        <di:waypoint x="250" y="536" />
+        <di:waypoint x="280" y="536" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="230" y="576" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

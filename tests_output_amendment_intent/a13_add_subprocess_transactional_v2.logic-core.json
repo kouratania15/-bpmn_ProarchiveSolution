@@ -1,0 +1,184 @@
+{
+  "process": {
+    "id": "process_transfer_funds",
+    "name": "Transfert d'argent entre comptes bancaires",
+    "isExecutable": true,
+    "documentation": "Processus de transfert d'argent initié par un client et traité par la banque. Le client transfère de l'argent entre deux comptes bancaires, et la banque traite le transfert comme une seule opération transactionnelle."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_bank",
+      "name": "Banque",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_transfer",
+      "name": "Début du transfert",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_transfer",
+      "name": "Transférer de l'argent entre deux comptes",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "subprocess_transfer",
+      "type": "subProcess",
+      "name": "Transfert bancaire",
+      "poolId": "pool_bank",
+      "isTransaction": true,
+      "documentation": "Sous-processus transactionnel pour le transfert bancaire"
+    },
+    {
+      "id": "task_debit_account",
+      "type": "task",
+      "name": "Débit du compte source",
+      "poolId": "pool_bank",
+      "parentSubProcessId": "subprocess_transfer",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_credit_account",
+      "type": "task",
+      "name": "Crédit du compte destination",
+      "poolId": "pool_bank",
+      "parentSubProcessId": "subprocess_transfer",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_annuler_credit",
+      "type": "task",
+      "name": "Annuler le crédit du compte destination",
+      "poolId": "pool_bank",
+      "isForCompensation": true,
+      "sourceProcessElement": "activity_5"
+    },
+    {
+      "id": "cancel_transfer",
+      "type": "boundaryEvent",
+      "name": "Échec du débit du compte source",
+      "attachedToRef": "subprocess_transfer",
+      "eventDefinition": "cancel",
+      "cancelActivity": true,
+      "poolId": "pool_bank"
+    },
+    {
+      "id": "throw_compensation",
+      "type": "intermediateThrowEvent",
+      "name": "Événement de compensation",
+      "eventDefinition": "compensation",
+      "poolId": "pool_bank"
+    },
+    {
+      "id": "start_subprocess_transfer",
+      "type": "startEvent",
+      "name": "Début du transfert bancaire",
+      "eventDefinition": "none",
+      "poolId": "pool_bank",
+      "parentSubProcessId": "subprocess_transfer"
+    },
+    {
+      "id": "end_subprocess_transfer",
+      "type": "endEvent",
+      "name": "Fin du transfert bancaire",
+      "eventDefinition": "none",
+      "poolId": "pool_bank",
+      "parentSubProcessId": "subprocess_transfer"
+    },
+    {
+      "id": "end_transfer",
+      "name": "Transfert traité avec succès",
+      "type": "endEvent",
+      "poolId": "pool_bank",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_bank",
+      "name": "Start Banque",
+      "type": "startEvent",
+      "poolId": "pool_bank"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_client_transfer",
+      "type": "sequenceFlow",
+      "source": "start_transfer",
+      "target": "task_client_transfer",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_client_transfer_to_bank_process",
+      "name": "Demande de transfert",
+      "type": "messageFlow",
+      "source": "task_client_transfer",
+      "target": "subprocess_transfer"
+    },
+    {
+      "id": "flow_start_pool_bank_to_subprocess_transfer",
+      "type": "sequenceFlow",
+      "source": "start_pool_bank",
+      "target": "subprocess_transfer"
+    },
+    {
+      "id": "flow_start_subprocess_transfer_to_debit_account",
+      "type": "sequenceFlow",
+      "source": "start_subprocess_transfer",
+      "target": "task_debit_account"
+    },
+    {
+      "id": "flow_debit_to_credit",
+      "type": "sequenceFlow",
+      "source": "task_debit_account",
+      "target": "task_credit_account"
+    },
+    {
+      "id": "flow_credit_to_end_subprocess_transfer",
+      "type": "sequenceFlow",
+      "source": "task_credit_account",
+      "target": "end_subprocess_transfer"
+    },
+    {
+      "id": "flow_subprocess_transfer_to_end_transfer",
+      "type": "sequenceFlow",
+      "source": "subprocess_transfer",
+      "target": "end_transfer"
+    },
+    {
+      "id": "flow_cancel_transfer_to_throw_compensation",
+      "type": "sequenceFlow",
+      "source": "cancel_transfer",
+      "target": "throw_compensation"
+    },
+    {
+      "id": "flow_compensation_to_annuler_credit",
+      "type": "association",
+      "source": "throw_compensation",
+      "target": "task_annuler_credit"
+    },
+    {
+      "id": "flow_annuler_credit_to_end_transfer",
+      "type": "sequenceFlow",
+      "source": "task_annuler_credit",
+      "target": "end_transfer"
+    },
+    {
+      "id": "flow_throw_compensation_to_end_transfer",
+      "type": "sequenceFlow",
+      "source": "throw_compensation",
+      "target": "end_transfer"
+    }
+  ]
+}

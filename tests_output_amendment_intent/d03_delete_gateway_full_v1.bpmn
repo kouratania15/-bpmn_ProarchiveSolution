@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_validation_demande_achat"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_validation_demande_achat">
+    <bpmn:participant id="pool_entreprise" name="Entreprise" processRef="process_validation_demande_achat" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_validation_demande_achat" name="Entreprise" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="lane_employe" name="Employé">
+        <bpmn:flowNodeRef>task_soumet_demande</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>task_validation_automatique</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_manager" name="Manager">
+        <bpmn:flowNodeRef>task_manager_approuve</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="start_demande_achat" name="Demande d&#x27;achat soumise">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_soumet</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_soumet_demande" name="Soumet une demande d&#x27;achat">
+      <bpmn:incoming>flow_start_soumet</bpmn:incoming>
+      <bpmn:outgoing>flow_soumet_gateway</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="gateway_montant_demande" name="Montant dépasse 1000€ ?">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_soumet_gateway</bpmn:incoming>
+      <bpmn:outgoing>flow_gateway_manager</bpmn:outgoing>
+      <bpmn:outgoing>flow_gateway_validation_auto</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="task_manager_approuve" name="Manager approuve la demande">
+      <bpmn:incoming>flow_gateway_manager</bpmn:incoming>
+      <bpmn:outgoing>flow_manager_end_approuvee</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:serviceTask id="task_validation_automatique" name="Validation automatique de la demande">
+      <bpmn:incoming>flow_gateway_validation_auto</bpmn:incoming>
+      <bpmn:outgoing>flow_validation_auto_end_validee</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="end_demande_approuvee" name="Demande approuvée">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_manager_end_approuvee</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end_demande_validee" name="Demande validée automatiquement">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_entreprise&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_validation_auto_end_validee</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_soumet" name="" sourceRef="start_demande_achat" targetRef="task_soumet_demande">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_soumet_gateway" name="" sourceRef="task_soumet_demande" targetRef="gateway_montant_demande">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_manager" name="Oui" sourceRef="gateway_montant_demande" targetRef="task_manager_approuve">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">le montant dépasse 1000 euros</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_manager_end_approuvee" name="" sourceRef="task_manager_approuve" targetRef="end_demande_approuvee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_gateway_validation_auto" name="Non" sourceRef="gateway_montant_demande" targetRef="task_validation_automatique">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">le montant ne dépasse pas 1000 euros</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_validation_auto_end_validee" name="" sourceRef="task_validation_automatique" targetRef="end_demande_validee">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_validation_demande_achat">
+      <bpmndi:BPMNShape id="pool_entreprise_di" bpmnElement="pool_entreprise" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="900" height="490" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_employe_di" bpmnElement="lane_employe" isHorizontal="true">
+        <dc:Bounds x="90" y="50" width="870" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lane_manager_di" bpmnElement="lane_manager" isHorizontal="true">
+        <dc:Bounds x="90" y="350" width="870" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_demande_achat_di" bpmnElement="start_demande_achat">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_soumet_demande_di" bpmnElement="task_soumet_demande">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_montant_demande_di" bpmnElement="gateway_montant_demande">
+        <dc:Bounds x="440" y="80" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_manager_approuve_di" bpmnElement="task_manager_approuve">
+        <dc:Bounds x="600" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_validation_automatique_di" bpmnElement="task_validation_automatique">
+        <dc:Bounds x="600" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_demande_approuvee_di" bpmnElement="end_demande_approuvee">
+        <dc:Bounds x="760" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_demande_validee_di" bpmnElement="end_demande_validee">
+        <dc:Bounds x="760" y="166" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_soumet_di" bpmnElement="flow_start_soumet">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumet_gateway_di" bpmnElement="flow_soumet_gateway">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="105" />
+        <di:waypoint x="440" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_manager_di" bpmnElement="flow_gateway_manager">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="545" y="105" />
+        <di:waypoint x="545" y="430" />
+        <di:waypoint x="600" y="430" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="410" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_manager_end_approuvee_di" bpmnElement="flow_manager_end_approuvee">
+        <di:waypoint x="700" y="430" />
+        <di:waypoint x="730" y="430" />
+        <di:waypoint x="730" y="98" />
+        <di:waypoint x="760" y="98" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_gateway_validation_auto_di" bpmnElement="flow_gateway_validation_auto">
+        <di:waypoint x="490" y="105" />
+        <di:waypoint x="545" y="105" />
+        <di:waypoint x="545" y="240" />
+        <di:waypoint x="600" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="525" y="220" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_validation_auto_end_validee_di" bpmnElement="flow_validation_auto_end_validee">
+        <di:waypoint x="700" y="240" />
+        <di:waypoint x="730" y="240" />
+        <di:waypoint x="730" y="184" />
+        <di:waypoint x="760" y="184" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

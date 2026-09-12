@@ -95,6 +95,25 @@ def create_process(name: str, instruction_text: str, logic_core_json: dict[str, 
     return process_id
 
 
+def list_processes() -> list[dict[str, Any]]:
+    """Retourne tous les process (id, name, created_at), les plus récents
+    d'abord — utilisé pour peupler la liste/sidebar de l'interface web."""
+    with _transaction() as cur:
+        cur.execute("SELECT id, name, created_at FROM processes ORDER BY created_at DESC")
+        return cur.fetchall()
+
+
+def delete_process(process_id: str) -> bool:
+    """Supprime un process et, via ON DELETE CASCADE, toutes ses versions.
+
+    Retourne True si un process a effectivement été supprimé, False s'il
+    n'existait pas déjà.
+    """
+    with _transaction() as cur:
+        cur.execute("DELETE FROM processes WHERE id = %s", (process_id,))
+        return cur.rowcount > 0
+
+
 def add_version(
     process_id: str,
     instruction_text: str,

@@ -1,0 +1,179 @@
+{
+  "process": {
+    "id": "process_expense_report",
+    "name": "Processus d'approbation de note de frais",
+    "documentation": "Processus d'approbation d'une note de frais avec condition basée sur le montant.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "company_pool",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employee",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        },
+        {
+          "id": "lane_finance_director",
+          "name": "Directeur Financier"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_expense_submitted",
+      "type": "startEvent",
+      "name": "Note de frais soumise",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_submit_expense",
+      "type": "task",
+      "name": "Soumet une note de frais",
+      "poolId": "company_pool",
+      "laneId": "lane_employee",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "intermediate_event_check_amount",
+      "type": "intermediateCatchEvent",
+      "name": "Vérification du montant",
+      "eventDefinition": "conditional",
+      "sourceProcessElement": "event_2",
+      "documentation": "GAP: connexion automatique de secours — eventDefinition manquant, inféré automatiquement comme 'conditional' à partir du nom du nœud — à vérifier contre le texte source (cf. section 8.1 de SKILL.md). ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "company_pool"
+    },
+    {
+      "id": "exclusive_gateway_amount_check",
+      "type": "exclusiveGateway",
+      "name": "Montant dépasse 500 euros ?",
+      "gatewayDirection": "diverging",
+      "sourceProcessElement": "gateway_1",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_transmit_to_finance_director",
+      "type": "task",
+      "name": "Transmet la note de frais au directeur financier",
+      "poolId": "company_pool",
+      "laneId": "lane_manager",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_finance_director_reviews",
+      "type": "task",
+      "name": "Directeur financier examine la note de frais",
+      "poolId": "company_pool",
+      "laneId": "lane_finance_director",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_manager_approves",
+      "type": "task",
+      "name": "Manager approuve la note de frais",
+      "poolId": "company_pool",
+      "laneId": "lane_manager",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_event_expense_approved",
+      "type": "endEvent",
+      "name": "Note de frais approuvée",
+      "eventDefinition": "none",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_expense_rejected",
+      "type": "endEvent",
+      "name": "Note de frais rejetée",
+      "eventDefinition": "none",
+      "poolId": "company_pool",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'company_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier. GAP: connexion automatique de secours — reçoit une transition de secours depuis 'task_manager_approves' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_manager_approves_2",
+      "type": "task",
+      "name": "Manager approuve la note de frais",
+      "poolId": "company_pool",
+      "laneId": "lane_manager",
+      "sourceProcessElement": "activity_4"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit_expense",
+      "source": "start_event_expense_submitted",
+      "target": "task_submit_expense",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_expense_to_check_amount",
+      "source": "task_submit_expense",
+      "target": "intermediate_event_check_amount",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_check_amount_to_gateway",
+      "source": "intermediate_event_check_amount",
+      "target": "exclusive_gateway_amount_check",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_gateway_to_transmit_finance",
+      "source": "exclusive_gateway_amount_check",
+      "target": "task_transmit_to_finance_director",
+      "type": "sequenceFlow",
+      "name": "Montant > 500 euros",
+      "condition": "montant > 500 euros",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_transmit_to_finance_review",
+      "source": "task_transmit_to_finance_director",
+      "target": "task_finance_director_reviews",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_finance_review_to_manager_approve",
+      "source": "task_finance_director_reviews",
+      "target": "task_manager_approves",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_gateway_to_approve_directly",
+      "source": "exclusive_gateway_amount_check",
+      "target": "task_manager_approves_2",
+      "type": "sequenceFlow",
+      "name": "Montant ≤ 500 euros",
+      "condition": "montant ≤ 500 euros",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_approve_to_end_approved",
+      "source": "task_manager_approves",
+      "target": "end_event_expense_approved",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "task_manager_approves_2",
+      "target": "end_event_expense_rejected",
+      "type": "sequenceFlow"
+    }
+  ]
+}

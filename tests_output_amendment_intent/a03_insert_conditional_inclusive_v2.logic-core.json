@@ -1,0 +1,145 @@
+{
+  "process": {
+    "id": "process_reporting_problem",
+    "name": "Processus de signalement d'un problème dans un logement",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_resident",
+      "name": "Locataire",
+      "lanes": []
+    },
+    {
+      "id": "pool_syndic",
+      "name": "Syndic",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_reporting",
+      "name": "Début du processus de signalement",
+      "type": "startEvent",
+      "poolId": "pool_resident",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_report_problem",
+      "name": "Signaler un problème dans son logement",
+      "type": "task",
+      "poolId": "pool_resident",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "gateway_technician_type",
+      "name": "Type de problème",
+      "type": "exclusiveGateway",
+      "poolId": "pool_syndic",
+      "gatewayDirection": "diverging"
+    },
+    {
+      "id": "task_send_plumber",
+      "name": "Envoyer un plombier",
+      "type": "task",
+      "poolId": "pool_syndic",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_send_electrician",
+      "name": "Envoyer un électricien",
+      "type": "task",
+      "poolId": "pool_syndic",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_send_technician",
+      "name": "Envoyer un technicien",
+      "type": "task",
+      "poolId": "pool_syndic",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_syndic' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_reporting",
+      "name": "Signalement traité",
+      "type": "endEvent",
+      "poolId": "pool_syndic",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_syndic",
+      "name": "Start Syndic",
+      "type": "startEvent",
+      "poolId": "pool_syndic"
+    },
+    {
+      "id": "gateway_technician_type_notify",
+      "type": "task",
+      "name": "Recevoir déclenchement de Locataire",
+      "poolId": "pool_syndic",
+      "documentation": "GAP: connexion automatique de secours — tâche relais insérée automatiquement entre la pool 'pool_resident' et le gateway 'gateway_technician_type' : un gateway ne peut jamais recevoir directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_report",
+      "type": "sequenceFlow",
+      "source": "start_reporting",
+      "target": "task_report_problem",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_report_to_gateway",
+      "type": "messageFlow",
+      "source": "task_report_problem",
+      "target": "gateway_technician_type_notify",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_send_technician_end",
+      "type": "sequenceFlow",
+      "source": "task_send_technician",
+      "target": "end_reporting"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_syndic",
+      "target": "task_send_technician"
+    },
+    {
+      "id": "flow_plumber",
+      "type": "sequenceFlow",
+      "source": "gateway_technician_type",
+      "target": "task_send_plumber",
+      "name": "Plomberie"
+    },
+    {
+      "id": "flow_electrician",
+      "type": "sequenceFlow",
+      "source": "gateway_technician_type",
+      "target": "task_send_electrician",
+      "name": "Électricité"
+    },
+    {
+      "id": "flow_plumber_end",
+      "type": "sequenceFlow",
+      "source": "task_send_plumber",
+      "target": "end_reporting"
+    },
+    {
+      "id": "flow_electrician_end",
+      "type": "sequenceFlow",
+      "source": "task_send_electrician",
+      "target": "end_reporting"
+    },
+    {
+      "id": "flow_report_to_gateway_seq",
+      "source": "gateway_technician_type_notify",
+      "target": "gateway_technician_type",
+      "type": "sequenceFlow"
+    }
+  ]
+}

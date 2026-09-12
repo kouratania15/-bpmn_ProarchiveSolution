@@ -1,0 +1,80 @@
+{
+  "process": {
+    "id": "process_demande_achat",
+    "name": "Processus de demande d'achat",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_entreprise",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employe",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_demande",
+      "name": "Demande d'achat soumise",
+      "type": "startEvent",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_soumet_demande",
+      "name": "Soumet une demande d'achat",
+      "type": "task",
+      "laneId": "lane_employe",
+      "poolId": "pool_entreprise",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_approuve_demande",
+      "name": "Le manager valide la demande d'achat",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "pool_entreprise",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_demande_approuvee",
+      "name": "Demande approuvée",
+      "type": "endEvent",
+      "poolId": "pool_entreprise",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_entreprise' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_soumet",
+      "type": "sequenceFlow",
+      "source": "start_demande",
+      "target": "task_soumet_demande",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_soumet_approuve",
+      "type": "sequenceFlow",
+      "source": "task_soumet_demande",
+      "target": "task_approuve_demande",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_approuve_fin",
+      "type": "sequenceFlow",
+      "source": "task_approuve_demande",
+      "target": "end_demande_approuvee"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "process": {
+    "id": "process_evaluation_offres",
+    "name": "Processus d'évaluation des offres",
+    "isExecutable": true,
+    "documentation": "Processus d'évaluation des offres soumises par les fournisseurs, initié par la soumission d'une offre et suivi par une évaluation par l'acheteur."
+  },
+  "pools": [
+    {
+      "id": "pool_fournisseur",
+      "name": "Fournisseur",
+      "lanes": []
+    },
+    {
+      "id": "pool_acheteur",
+      "name": "Acheteur",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_evaluation",
+      "name": "Début du processus d'évaluation des offres",
+      "type": "startEvent",
+      "poolId": "pool_fournisseur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_fournisseur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_offer",
+      "name": "Soumet une offre",
+      "type": "task",
+      "poolId": "pool_fournisseur",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "conditional_stock_check",
+      "name": "Stock en dessous du seuil de réapprovisionnement",
+      "type": "intermediateCatchEvent",
+      "poolId": "pool_acheteur",
+      "eventDefinition": "conditional",
+      "documentation": "Attente jusqu'à ce que le stock du produit concerné passe en dessous du seuil de réapprovisionnement."
+    },
+    {
+      "id": "task_evaluate_offer",
+      "name": "Évalue l'offre",
+      "type": "task",
+      "poolId": "pool_acheteur",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_acheteur' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_evaluation",
+      "name": "Fin de l'évaluation de l'offre",
+      "type": "endEvent",
+      "poolId": "pool_acheteur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_acheteur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_acheteur",
+      "name": "Start Acheteur",
+      "type": "startEvent",
+      "poolId": "pool_acheteur"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_submit",
+      "type": "sequenceFlow",
+      "source": "start_evaluation",
+      "target": "task_submit_offer",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_evaluate",
+      "type": "messageFlow",
+      "source": "task_submit_offer",
+      "target": "conditional_stock_check",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_conditional_evaluate",
+      "type": "sequenceFlow",
+      "source": "conditional_stock_check",
+      "target": "task_evaluate_offer",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_evaluate_end",
+      "type": "sequenceFlow",
+      "source": "task_evaluate_offer",
+      "target": "end_evaluation",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_acheteur",
+      "target": "task_evaluate_offer"
+    }
+  ]
+}

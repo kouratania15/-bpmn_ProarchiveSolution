@@ -26,7 +26,7 @@
         "required": ["id", "name"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
           "name": { "type": "string" },
           "processRef": { "type": "string" },
           "collapsed": { "type": "boolean", "default": false },
@@ -37,7 +37,7 @@
               "required": ["id", "name"],
               "additionalProperties": false,
               "properties": {
-                "id": { "type": "string" },
+                "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
                 "name": { "type": "string" },
                 "documentation": { "type": "string" }
               }
@@ -176,7 +176,7 @@
         "required": ["id", "source", "target", "type"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string" },
+          "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
           "source": { "type": "string", "description": "ID du nœud source" },
           "target": { "type": "string", "description": "ID du nœud cible" },
           "type": {

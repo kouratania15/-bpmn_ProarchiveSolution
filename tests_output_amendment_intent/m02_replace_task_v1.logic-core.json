@@ -1,0 +1,88 @@
+{
+  "process": {
+    "id": "process_command_confirmation",
+    "name": "Processus de commande et confirmation",
+    "documentation": "Processus où le client passe une commande et le système envoie une confirmation par email.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false,
+      "lanes": []
+    },
+    {
+      "id": "pool_system",
+      "name": "Système",
+      "collapsed": false,
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_command",
+      "type": "startEvent",
+      "name": "Commande passée par le client",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_pass_command",
+      "type": "task",
+      "name": "Passer une commande",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_send_confirmation_email",
+      "type": "sendTask",
+      "name": "Envoyer email de confirmation",
+      "poolId": "pool_system",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_system' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_confirmation_sent",
+      "type": "endEvent",
+      "name": "Confirmation envoyée",
+      "eventDefinition": "none",
+      "poolId": "pool_system"
+    },
+    {
+      "id": "start_pool_system",
+      "type": "startEvent",
+      "name": "Start Système",
+      "poolId": "pool_system"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_pass_command",
+      "source": "start_command",
+      "target": "task_pass_command",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "flow_pass_command_to_send_confirmation",
+      "source": "task_pass_command",
+      "target": "task_send_confirmation_email",
+      "type": "messageFlow",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "flow_send_confirmation_to_end",
+      "source": "task_send_confirmation_email",
+      "target": "end_confirmation_sent",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_system",
+      "target": "task_send_confirmation_email",
+      "type": "sequenceFlow"
+    }
+  ]
+}

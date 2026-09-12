@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_livraison_colis"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_process_livraison_colis">
+    <bpmn:participant id="pool_transporteur" name="Transporteur" processRef="process_livraison_colis" />
+  </bpmn:collaboration>
+  <bpmn:process id="process_livraison_colis" name="Transporteur" isExecutable="true">
+    <bpmn:startEvent id="start_livraison" name="Début de la livraison du colis">
+      <bpmn:outgoing>flow_start_colis</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_colis_en_cours" name="Colis en cours de livraison">
+      <bpmn:incoming>flow_start_colis</bpmn:incoming>
+      <bpmn:outgoing>flow_colis_livraison</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_livraison_transporteur" name="Livraison du colis par le transporteur">
+      <bpmn:incoming>flow_colis_livraison</bpmn:incoming>
+      <bpmn:outgoing>flow_livraison_end</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_livraison_terminee" name="Livraison du colis terminée">
+      <bpmn:incoming>flow_livraison_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="subprocess_annulation" name="Annulation de la commande" triggeredByEvent="true">
+      <bpmn:incoming>flow_annulation_boundary</bpmn:incoming>
+      <bpmn:startEvent id="start_annulation" name="Annulation de la commande par le client">
+        <bpmn:outgoing>flow_1</bpmn:outgoing>
+        <bpmn:messageEventDefinition id="start_annulation_def">
+        </bpmn:messageEventDefinition>
+      </bpmn:startEvent>
+      <bpmn:task id="task_retour_colis" name="Retour du colis à l&#x27;entrepôt">
+        <bpmn:incoming>flow_1</bpmn:incoming>
+        <bpmn:outgoing>flow_retour_end</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="end_annulation" name="Annulation de la commande terminée">
+        <bpmn:incoming>flow_retour_end</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:startEvent id="start_subprocess_annulation" name="Début du sous-processus d&#x27;annulation">
+        <bpmn:outgoing>flow_subprocess_start_end</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="end_subprocess_annulation" name="Fin du sous-processus d&#x27;annulation">
+        <bpmn:incoming>flow_subprocess_start_end</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_annulation" targetRef="task_retour_colis">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_retour_end" name="" sourceRef="task_retour_colis" targetRef="end_annulation">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_subprocess_start_end" name="" sourceRef="start_subprocess_annulation" targetRef="end_subprocess_annulation">
+      </bpmn:sequenceFlow>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="boundary_annulation" name="Annulation de la commande" attachedToRef="task_colis_en_cours" cancelActivity="true">
+      <bpmn:outgoing>flow_annulation_boundary</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="boundary_annulation_def">
+      </bpmn:messageEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="flow_start_colis" name="" sourceRef="start_livraison" targetRef="task_colis_en_cours">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_colis_livraison" name="" sourceRef="task_colis_en_cours" targetRef="task_livraison_transporteur">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_livraison_end" name="" sourceRef="task_livraison_transporteur" targetRef="end_livraison_terminee">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_annulation_boundary" name="" sourceRef="boundary_annulation" targetRef="subprocess_annulation">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_livraison_colis">
+      <bpmndi:BPMNShape id="pool_transporteur_di" bpmnElement="pool_transporteur" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1012" height="466" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_livraison_di" bpmnElement="start_livraison">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_colis_en_cours_di" bpmnElement="task_colis_en_cours">
+        <dc:Bounds x="556" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_livraison_transporteur_di" bpmnElement="task_livraison_transporteur">
+        <dc:Bounds x="716" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_livraison_terminee_di" bpmnElement="end_livraison_terminee">
+        <dc:Bounds x="876" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="subprocess_annulation_di" bpmnElement="subprocess_annulation" isExpanded="true">
+        <dc:Bounds x="120" y="200" width="436" height="246" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_annulation_di" bpmnElement="start_annulation">
+        <dc:Bounds x="160" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_retour_colis_di" bpmnElement="task_retour_colis">
+        <dc:Bounds x="320" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_annulation_di" bpmnElement="end_annulation">
+        <dc:Bounds x="480" y="250" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="boundary_annulation_di" bpmnElement="boundary_annulation">
+        <dc:Bounds x="638" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_subprocess_annulation_di" bpmnElement="start_subprocess_annulation">
+        <dc:Bounds x="160" y="336" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_subprocess_annulation_di" bpmnElement="end_subprocess_annulation">
+        <dc:Bounds x="320" y="380" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_colis_di" bpmnElement="flow_start_colis">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="356" y="108" />
+        <di:waypoint x="356" y="130" />
+        <di:waypoint x="556" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_colis_livraison_di" bpmnElement="flow_colis_livraison">
+        <di:waypoint x="656" y="130" />
+        <di:waypoint x="716" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_livraison_end_di" bpmnElement="flow_livraison_end">
+        <di:waypoint x="816" y="130" />
+        <di:waypoint x="846" y="130" />
+        <di:waypoint x="846" y="108" />
+        <di:waypoint x="876" y="108" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_annulation_boundary_di" bpmnElement="flow_annulation_boundary">
+        <di:waypoint x="656" y="188" />
+        <di:waypoint x="686" y="188" />
+        <di:waypoint x="686" y="383" />
+        <di:waypoint x="90" y="383" />
+        <di:waypoint x="90" y="323" />
+        <di:waypoint x="120" y="323" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="196" y="268" />
+        <di:waypoint x="258" y="268" />
+        <di:waypoint x="258" y="290" />
+        <di:waypoint x="320" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_retour_end_di" bpmnElement="flow_retour_end">
+        <di:waypoint x="420" y="290" />
+        <di:waypoint x="450" y="290" />
+        <di:waypoint x="450" y="268" />
+        <di:waypoint x="480" y="268" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_subprocess_start_end_di" bpmnElement="flow_subprocess_start_end">
+        <di:waypoint x="196" y="354" />
+        <di:waypoint x="258" y="354" />
+        <di:waypoint x="258" y="398" />
+        <di:waypoint x="320" y="398" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

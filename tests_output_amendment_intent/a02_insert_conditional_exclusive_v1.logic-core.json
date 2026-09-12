@@ -1,0 +1,79 @@
+{
+  "process": {
+    "id": "process_expense_management",
+    "name": "Processus de gestion de note de frais",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_employee",
+          "name": "Employé"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Manager"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_expense_process",
+      "type": "startEvent",
+      "name": "Début du processus de gestion de note de frais",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_submit_expense",
+      "type": "task",
+      "name": "Soumet une note de frais",
+      "poolId": "pool_company",
+      "laneId": "lane_employee",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_approve_expense",
+      "type": "task",
+      "name": "Approuve la note de frais",
+      "poolId": "pool_company",
+      "laneId": "lane_manager",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_expense_approved",
+      "type": "endEvent",
+      "name": "Note de frais approuvée",
+      "eventDefinition": "none",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_submit",
+      "source": "start_expense_process",
+      "target": "task_submit_expense",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "flow_submit_approve",
+      "source": "task_submit_expense",
+      "target": "task_approve_expense",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_approve_end",
+      "source": "task_approve_expense",
+      "target": "end_expense_approved",
+      "type": "sequenceFlow"
+    }
+  ]
+}

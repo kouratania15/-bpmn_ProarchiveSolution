@@ -1,0 +1,81 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "documentation": "Processus de recrutement impliquant un candidat et un recruteur. Débuté par la candidature, suivi par un entretien et un compte-rendu.",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_recrutement",
+      "name": "Processus de recrutement",
+      "lanes": [
+        {
+          "id": "lane_candidat",
+          "name": "Candidat"
+        },
+        {
+          "id": "lane_recruteur",
+          "name": "Recruteur"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "type": "startEvent",
+      "name": "Début du processus de recrutement",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1",
+      "poolId": "pool_recrutement",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_recrutement' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_entretien",
+      "type": "task",
+      "name": "Passer un entretien",
+      "poolId": "pool_recrutement",
+      "laneId": "lane_candidat",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_compte_rendu",
+      "type": "task",
+      "name": "Rédiger un compte-rendu",
+      "poolId": "pool_recrutement",
+      "laneId": "lane_recruteur",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_recrutement",
+      "type": "endEvent",
+      "name": "Fin du processus de recrutement",
+      "eventDefinition": "none",
+      "poolId": "pool_recrutement",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_recrutement' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_entretien",
+      "source": "start_recrutement",
+      "target": "task_entretien",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_entretien_compte_rendu",
+      "source": "task_entretien",
+      "target": "task_compte_rendu",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_compte_rendu_end",
+      "source": "task_compte_rendu",
+      "target": "end_recrutement",
+      "type": "sequenceFlow"
+    }
+  ]
+}

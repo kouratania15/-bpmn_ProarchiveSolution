@@ -10,3 +10,6 @@ pytest>=8.0.0
 python-dotenv>=1.0.0
 # 6. Connecteur MySQL pour le versioning des schémas BPMN
 mysql-connector-python>=9.0.0
+# 7. API web (interface chat) exposant le pipeline existant
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0

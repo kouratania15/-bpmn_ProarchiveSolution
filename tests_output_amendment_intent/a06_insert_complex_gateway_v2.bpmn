@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_evaluation_projet"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_soumission_vote1" name="flow_soumission_vote1" />
+  <bpmn:message id="Message_flow_approbation_notification" name="flow_approbation_notification" />
+  <bpmn:collaboration id="Collaboration_process_evaluation_projet">
+    <bpmn:participant id="pool_comite" name="Comité d&#x27;évaluation" processRef="pool_comite_process" />
+    <bpmn:participant id="pool_demandeur" name="Demandeur du projet" processRef="pool_demandeur_process" />
+    <bpmn:messageFlow id="flow_soumission_vote1" name="" sourceRef="task_soumission_projet" targetRef="task_vote_membre1" messageRef="Message_flow_soumission_vote1" />
+    <bpmn:messageFlow id="flow_approbation_notification" name="" sourceRef="task_approbation" targetRef="task_notification_demandeur" messageRef="Message_flow_approbation_notification" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_comite_process" name="Comité d&#x27;évaluation" isExecutable="true">
+    <bpmn:task id="task_vote_membre1" name="Membre 1 vote sur le projet">
+      <bpmn:documentation>GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool &#x27;pool_comite&#x27; ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_1</bpmn:incoming>
+      <bpmn:outgoing>flow_vote1_vote2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_vote_membre2" name="Membre 2 vote sur le projet">
+      <bpmn:incoming>flow_vote1_vote2</bpmn:incoming>
+      <bpmn:outgoing>flow_vote2_vote3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_vote_membre3" name="Membre 3 vote sur le projet">
+      <bpmn:incoming>flow_vote2_vote3</bpmn:incoming>
+      <bpmn:outgoing>flow_vote3_vote4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_vote_membre4" name="Membre 4 vote sur le projet">
+      <bpmn:incoming>flow_vote3_vote4</bpmn:incoming>
+      <bpmn:outgoing>flow_vote4_vote5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_vote_membre5" name="Membre 5 vote sur le projet">
+      <bpmn:incoming>flow_vote4_vote5</bpmn:incoming>
+      <bpmn:outgoing>flow_vote5_decision</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:complexGateway id="gateway_decision_complexe" name="Décision du comité">
+      <bpmn:documentation>Au moins 3 votes favorables sur 5 requis pour l&#x27;approbation GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_comite&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_vote5_decision</bpmn:incoming>
+      <bpmn:outgoing>flow_decision_approbation</bpmn:outgoing>
+      <bpmn:outgoing>flow_decision_reject</bpmn:outgoing>
+    </bpmn:complexGateway>
+    <bpmn:task id="task_approbation" name="Approbation du projet">
+      <bpmn:incoming>flow_decision_approbation</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_reject" name="Projet rejeté">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_comite&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_decision_reject</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="start_pool_comite" name="Start Comité d&#x27;évaluation">
+      <bpmn:outgoing>flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="flow_vote1_vote2" name="" sourceRef="task_vote_membre1" targetRef="task_vote_membre2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_vote2_vote3" name="" sourceRef="task_vote_membre2" targetRef="task_vote_membre3">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_vote3_vote4" name="" sourceRef="task_vote_membre3" targetRef="task_vote_membre4">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_vote4_vote5" name="" sourceRef="task_vote_membre4" targetRef="task_vote_membre5">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_vote5_decision" name="" sourceRef="task_vote_membre5" targetRef="gateway_decision_complexe">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_approbation" name="" sourceRef="gateway_decision_complexe" targetRef="task_approbation">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_decision_reject" name="" sourceRef="gateway_decision_complexe" targetRef="end_event_reject">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_1" name="" sourceRef="start_pool_comite" targetRef="task_vote_membre1">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_demandeur_process" name="Demandeur du projet" isExecutable="true">
+    <bpmn:startEvent id="start_event" name="Début de l&#x27;évaluation du projet">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_demandeur&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:outgoing>flow_start_soumission</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_soumission_projet" name="Soumission du projet par le demandeur">
+      <bpmn:incoming>flow_start_soumission</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:task id="task_notification_demandeur" name="Notification du demandeur">
+      <bpmn:outgoing>flow_notification_approve</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event_approve" name="Projet approuvé">
+      <bpmn:documentation>GAP: connexion automatique de secours — assigné automatiquement au pool &#x27;pool_demandeur&#x27; (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.</bpmn:documentation>
+      <bpmn:incoming>flow_notification_approve</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_soumission" name="" sourceRef="start_event" targetRef="task_soumission_projet">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_notification_approve" name="" sourceRef="task_notification_demandeur" targetRef="end_event_approve">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_evaluation_projet">
+      <bpmndi:BPMNShape id="pool_comite_di" bpmnElement="pool_comite" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="1440" height="366" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_demandeur_di" bpmnElement="pool_demandeur" isHorizontal="true">
+        <dc:Bounds x="60" y="456" width="1696" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_soumission_projet_di" bpmnElement="task_soumission_projet">
+        <dc:Bounds x="280" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_vote_membre1_di" bpmnElement="task_vote_membre1">
+        <dc:Bounds x="280" y="266" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_vote_membre2_di" bpmnElement="task_vote_membre2">
+        <dc:Bounds x="440" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_vote_membre3_di" bpmnElement="task_vote_membre3">
+        <dc:Bounds x="600" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_vote_membre4_di" bpmnElement="task_vote_membre4">
+        <dc:Bounds x="760" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_vote_membre5_di" bpmnElement="task_vote_membre5">
+        <dc:Bounds x="920" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gateway_decision_complexe_di" bpmnElement="gateway_decision_complexe">
+        <dc:Bounds x="1080" y="90" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_approbation_di" bpmnElement="task_approbation">
+        <dc:Bounds x="1240" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_notification_demandeur_di" bpmnElement="task_notification_demandeur">
+        <dc:Bounds x="1400" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_approve_di" bpmnElement="end_event_approve">
+        <dc:Bounds x="1560" y="496" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_reject_di" bpmnElement="end_event_reject">
+        <dc:Bounds x="1240" y="266" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_pool_comite_di" bpmnElement="start_pool_comite">
+        <dc:Bounds x="120" y="200" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_soumission_di" bpmnElement="flow_start_soumission">
+        <di:waypoint x="156" y="514" />
+        <di:waypoint x="218" y="514" />
+        <di:waypoint x="218" y="536" />
+        <di:waypoint x="280" y="536" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_vote1_vote2_di" bpmnElement="flow_vote1_vote2">
+        <di:waypoint x="380" y="306" />
+        <di:waypoint x="410" y="306" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="440" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_vote2_vote3_di" bpmnElement="flow_vote2_vote3">
+        <di:waypoint x="540" y="130" />
+        <di:waypoint x="600" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_vote3_vote4_di" bpmnElement="flow_vote3_vote4">
+        <di:waypoint x="700" y="130" />
+        <di:waypoint x="760" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_vote4_vote5_di" bpmnElement="flow_vote4_vote5">
+        <di:waypoint x="860" y="130" />
+        <di:waypoint x="920" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_vote5_decision_di" bpmnElement="flow_vote5_decision">
+        <di:waypoint x="1020" y="130" />
+        <di:waypoint x="1050" y="130" />
+        <di:waypoint x="1050" y="115" />
+        <di:waypoint x="1080" y="115" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_approbation_di" bpmnElement="flow_decision_approbation">
+        <di:waypoint x="1130" y="115" />
+        <di:waypoint x="1185" y="115" />
+        <di:waypoint x="1185" y="130" />
+        <di:waypoint x="1240" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_notification_approve_di" bpmnElement="flow_notification_approve">
+        <di:waypoint x="1500" y="536" />
+        <di:waypoint x="1530" y="536" />
+        <di:waypoint x="1530" y="514" />
+        <di:waypoint x="1560" y="514" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_decision_reject_di" bpmnElement="flow_decision_reject">
+        <di:waypoint x="1130" y="115" />
+        <di:waypoint x="1185" y="115" />
+        <di:waypoint x="1185" y="284" />
+        <di:waypoint x="1240" y="284" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_1_di" bpmnElement="flow_1">
+        <di:waypoint x="156" y="218" />
+        <di:waypoint x="218" y="218" />
+        <di:waypoint x="218" y="306" />
+        <di:waypoint x="280" y="306" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumission_vote1_di" bpmnElement="flow_soumission_vote1">
+        <di:waypoint x="380" y="536" />
+        <di:waypoint x="410" y="536" />
+        <di:waypoint x="410" y="596" />
+        <di:waypoint x="250" y="596" />
+        <di:waypoint x="250" y="306" />
+        <di:waypoint x="280" y="306" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_approbation_notification_di" bpmnElement="flow_approbation_notification">
+        <di:waypoint x="1340" y="130" />
+        <di:waypoint x="1370" y="130" />
+        <di:waypoint x="1370" y="536" />
+        <di:waypoint x="1400" y="536" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

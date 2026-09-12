@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Process_Processus_analyse"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:process id="Process_Processus_analyse" name="Processus analysé" isExecutable="true">
+    <bpmn:startEvent id="start_event" name="Demande d&#x27;achat soumise">
+      <bpmn:outgoing>flow_start_to_activity_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="activity_1" name="soumet une demande d&#x27;achat">
+      <bpmn:incoming>flow_start_to_activity_1</bpmn:incoming>
+      <bpmn:outgoing>flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="activity_2" name="approuve la demande d&#x27;achat">
+      <bpmn:incoming>flow_2</bpmn:incoming>
+      <bpmn:outgoing>flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="end_event" name="Demande approuvée">
+      <bpmn:incoming>flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_start_to_activity_1" name="" sourceRef="start_event" targetRef="activity_1">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_2" name="" sourceRef="activity_1" targetRef="activity_2">
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow_3" name="" sourceRef="activity_2" targetRef="end_event">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Processus_analyse">
+      <bpmndi:BPMNShape id="start_event_di" bpmnElement="start_event">
+        <dc:Bounds x="120" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="activity_1_di" bpmnElement="activity_1">
+        <dc:Bounds x="280" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="activity_2_di" bpmnElement="activity_2">
+        <dc:Bounds x="440" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_event_di" bpmnElement="end_event">
+        <dc:Bounds x="600" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_to_activity_1_di" bpmnElement="flow_start_to_activity_1">
+        <di:waypoint x="156" y="98" />
+        <di:waypoint x="218" y="98" />
+        <di:waypoint x="218" y="120" />
+        <di:waypoint x="280" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_2_di" bpmnElement="flow_2">
+        <di:waypoint x="380" y="120" />
+        <di:waypoint x="440" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_3_di" bpmnElement="flow_3">
+        <di:waypoint x="540" y="120" />
+        <di:waypoint x="570" y="120" />
+        <di:waypoint x="570" y="98" />
+        <di:waypoint x="600" y="98" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,86 @@
+{
+  "process": {
+    "id": "process_order_fulfillment",
+    "name": "Processus de commande de meubles",
+    "documentation": "Processus de commande de meubles où un client passe une commande et le magasin la prépare."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "collapsed": false
+    },
+    {
+      "id": "pool_magasin",
+      "name": "Magasin",
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_received_order",
+      "type": "startEvent",
+      "name": "Commande reçue",
+      "eventDefinition": "none",
+      "poolId": "pool_client",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_client_place_order",
+      "type": "task",
+      "name": "Passe une commande de meubles",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_magasin_prepare_order",
+      "type": "task",
+      "name": "Prépare la commande",
+      "poolId": "pool_magasin",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_magasin' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_order_prepared",
+      "type": "endEvent",
+      "name": "Commande préparée",
+      "eventDefinition": "none",
+      "poolId": "pool_magasin"
+    },
+    {
+      "id": "start_pool_magasin",
+      "type": "startEvent",
+      "name": "Start Magasin",
+      "poolId": "pool_magasin"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_client_order",
+      "source": "start_received_order",
+      "target": "task_client_place_order",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_client_order_to_magasin_prepare",
+      "source": "task_client_place_order",
+      "target": "task_magasin_prepare_order",
+      "type": "messageFlow",
+      "name": "Commande transmise au magasin",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_magasin_prepare_to_end",
+      "source": "task_magasin_prepare_order",
+      "target": "end_order_prepared",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_magasin",
+      "target": "task_magasin_prepare_order",
+      "type": "sequenceFlow"
+    }
+  ]
+}

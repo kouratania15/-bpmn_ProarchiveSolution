@@ -1,0 +1,85 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "isExecutable": true,
+    "documentation": "Processus de recrutement d'un nouvel employé incluant l'initiation du recrutement, la vérification des antécédents et la préparation de son arrivée par le service RH."
+  },
+  "pools": [
+    {
+      "id": "pool_rh",
+      "name": "Service RH",
+      "lanes": []
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "name": "Début du processus de recrutement",
+      "type": "startEvent",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_recrutement",
+      "name": "Recrutement d'un nouvel employé",
+      "type": "task",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_verification_antecedents",
+      "name": "Vérification des antécédents",
+      "type": "callActivity",
+      "poolId": "pool_rh",
+      "documentation": "calledElement: Processus standard de vérification des antécédents",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_preparation_arrivee",
+      "name": "Préparation de l'arrivée du nouvel employé",
+      "type": "task",
+      "poolId": "pool_rh",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_recrutement",
+      "name": "Fin du processus de recrutement",
+      "type": "endEvent",
+      "poolId": "pool_rh",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_rh' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_recrutement",
+      "type": "sequenceFlow",
+      "source": "start_recrutement",
+      "target": "task_recrutement",
+      "sourceProcessElement": "event_1->activity_1"
+    },
+    {
+      "id": "flow_recrutement_verification",
+      "type": "sequenceFlow",
+      "source": "task_recrutement",
+      "target": "task_verification_antecedents",
+      "sourceProcessElement": "activity_1->activity_2"
+    },
+    {
+      "id": "flow_verification_preparation",
+      "type": "sequenceFlow",
+      "source": "task_verification_antecedents",
+      "target": "task_preparation_arrivee",
+      "sourceProcessElement": "activity_2->activity_3"
+    },
+    {
+      "id": "flow_preparation_end",
+      "type": "sequenceFlow",
+      "source": "task_preparation_arrivee",
+      "target": "end_recrutement"
+    }
+  ]
+}

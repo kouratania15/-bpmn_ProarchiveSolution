@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_process_reclamation"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="BPMN-Agent" exporterVersion="1.0">
+  <bpmn:message id="Message_flow_soumet_traiter" name="flow_soumet_traiter" />
+  <bpmn:collaboration id="Collaboration_process_reclamation">
+    <bpmn:participant id="pool_client" name="Client" processRef="pool_client_process" />
+    <bpmn:participant id="pool_entreprise" name="Entreprise" processRef="pool_entreprise_process" />
+    <bpmn:messageFlow id="flow_soumet_traiter" name="" sourceRef="task_soumet_reclamation" targetRef="task_traiter_reclamation" messageRef="Message_flow_soumet_traiter" />
+  </bpmn:collaboration>
+  <bpmn:process id="pool_client_process" name="Client" isExecutable="true">
+    <bpmn:startEvent id="start_reclamation" name="Réclamation soumise">
+      <bpmn:outgoing>flow_start_reclamation</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="task_soumet_reclamation" name="Soumettre une réclamation">
+      <bpmn:incoming>flow_start_reclamation</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_start_reclamation" name="" sourceRef="start_reclamation" targetRef="task_soumet_reclamation">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmn:process id="pool_entreprise_process" name="Entreprise" isExecutable="true">
+    <bpmn:subProcess id="task_traiter_reclamation" name="Traiter la réclamation">
+      <bpmn:outgoing>flow_end_reclamation</bpmn:outgoing>
+      <bpmn:task id="task_verifier_historique" name="Vérifier l&#x27;historique du client">
+        <bpmn:incoming>flow_start_verifier</bpmn:incoming>
+        <bpmn:outgoing>flow_verifier_evaluer</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_evaluer_validite" name="Évaluer la validité de la réclamation">
+        <bpmn:incoming>flow_verifier_evaluer</bpmn:incoming>
+        <bpmn:outgoing>flow_evaluer_compenser</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_proposer_compensation" name="Proposer une compensation">
+        <bpmn:incoming>flow_evaluer_compenser</bpmn:incoming>
+        <bpmn:outgoing>flow_compenser_end</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:startEvent id="start_traiter_reclamation" name="Début du traitement de la réclamation">
+        <bpmn:outgoing>flow_start_verifier</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="end_traiter_reclamation" name="Traitement de la réclamation terminé">
+        <bpmn:incoming>flow_compenser_end</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="flow_start_verifier" name="" sourceRef="start_traiter_reclamation" targetRef="task_verifier_historique">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_verifier_evaluer" name="" sourceRef="task_verifier_historique" targetRef="task_evaluer_validite">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_evaluer_compenser" name="" sourceRef="task_evaluer_validite" targetRef="task_proposer_compensation">
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="flow_compenser_end" name="" sourceRef="task_proposer_compensation" targetRef="end_traiter_reclamation">
+      </bpmn:sequenceFlow>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="end_reclamation_traitement" name="Réclamation traitée et compensation proposée">
+      <bpmn:incoming>flow_end_reclamation</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow_end_reclamation" name="" sourceRef="task_traiter_reclamation" targetRef="end_reclamation_traitement">
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_process_reclamation">
+      <bpmndi:BPMNShape id="pool_client_di" bpmnElement="pool_client" isHorizontal="true">
+        <dc:Bounds x="60" y="50" width="480" height="190" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pool_entreprise_di" bpmnElement="pool_entreprise" isHorizontal="true">
+        <dc:Bounds x="60" y="280" width="1332" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_reclamation_di" bpmnElement="start_reclamation">
+        <dc:Bounds x="120" y="90" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_soumet_reclamation_di" bpmnElement="task_soumet_reclamation">
+        <dc:Bounds x="280" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_traiter_reclamation_di" bpmnElement="task_traiter_reclamation" isExpanded="true">
+        <dc:Bounds x="440" y="320" width="756" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_verifier_historique_di" bpmnElement="task_verifier_historique">
+        <dc:Bounds x="640" y="370" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_evaluer_validite_di" bpmnElement="task_evaluer_validite">
+        <dc:Bounds x="800" y="370" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_proposer_compensation_di" bpmnElement="task_proposer_compensation">
+        <dc:Bounds x="960" y="370" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_traiter_reclamation_di" bpmnElement="start_traiter_reclamation">
+        <dc:Bounds x="480" y="370" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_traiter_reclamation_di" bpmnElement="end_traiter_reclamation">
+        <dc:Bounds x="1120" y="370" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_reclamation_traitement_di" bpmnElement="end_reclamation_traitement">
+        <dc:Bounds x="1196" y="320" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_start_reclamation_di" bpmnElement="flow_start_reclamation">
+        <di:waypoint x="156" y="108" />
+        <di:waypoint x="218" y="108" />
+        <di:waypoint x="218" y="130" />
+        <di:waypoint x="280" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_start_verifier_di" bpmnElement="flow_start_verifier">
+        <di:waypoint x="516" y="388" />
+        <di:waypoint x="578" y="388" />
+        <di:waypoint x="578" y="410" />
+        <di:waypoint x="640" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_verifier_evaluer_di" bpmnElement="flow_verifier_evaluer">
+        <di:waypoint x="740" y="410" />
+        <di:waypoint x="800" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_evaluer_compenser_di" bpmnElement="flow_evaluer_compenser">
+        <di:waypoint x="900" y="410" />
+        <di:waypoint x="960" y="410" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_compenser_end_di" bpmnElement="flow_compenser_end">
+        <di:waypoint x="1060" y="410" />
+        <di:waypoint x="1090" y="410" />
+        <di:waypoint x="1090" y="388" />
+        <di:waypoint x="1120" y="388" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_end_reclamation_di" bpmnElement="flow_end_reclamation">
+        <di:waypoint x="1196" y="400" />
+        <di:waypoint x="1226" y="400" />
+        <di:waypoint x="1226" y="460" />
+        <di:waypoint x="1166" y="460" />
+        <di:waypoint x="1166" y="338" />
+        <di:waypoint x="1196" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_soumet_traiter_di" bpmnElement="flow_soumet_traiter">
+        <di:waypoint x="380" y="130" />
+        <di:waypoint x="410" y="130" />
+        <di:waypoint x="410" y="400" />
+        <di:waypoint x="440" y="400" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

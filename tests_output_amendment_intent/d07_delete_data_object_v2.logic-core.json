@@ -1,0 +1,88 @@
+{
+  "process": {
+    "id": "process_register_supplier",
+    "name": "Processus d'enregistrement d'un fournisseur",
+    "isExecutable": true,
+    "documentation": "Processus d'enregistrement initial d'un fournisseur : soumission des données puis vérification d'enregistrement existant."
+  },
+  "pools": [
+    {
+      "id": "pool_company",
+      "name": "Entreprise",
+      "lanes": [
+        {
+          "id": "lane_supplier",
+          "name": "Fournisseur"
+        },
+        {
+          "id": "lane_manager",
+          "name": "Gestionnaire"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "name": "Début du processus d'enregistrement",
+      "type": "startEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_submit_data",
+      "name": "Soumet ses données d'enregistrement",
+      "type": "task",
+      "laneId": "lane_supplier",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "data_store_supplier_db",
+      "name": "Base de données des fournisseurs",
+      "type": "dataStoreReference",
+      "poolId": "pool_company",
+      "documentation": "Base de données interne consultée pour vérifier l'enregistrement existant GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_check_registration",
+      "name": "Vérifie si le fournisseur est déjà enregistré",
+      "type": "task",
+      "laneId": "lane_manager",
+      "poolId": "pool_company",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "end_event",
+      "name": "Fin du processus de vérification",
+      "type": "endEvent",
+      "poolId": "pool_company",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_company' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "type": "sequenceFlow",
+      "source": "start_event",
+      "target": "task_submit_data",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_check",
+      "type": "sequenceFlow",
+      "source": "task_submit_data",
+      "target": "task_check_registration",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_check_to_end",
+      "type": "sequenceFlow",
+      "source": "task_check_registration",
+      "target": "end_event"
+    }
+  ]
+}

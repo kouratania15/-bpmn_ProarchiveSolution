@@ -1,0 +1,117 @@
+{
+  "process": {
+    "id": "process_depot_et_expedition_colis",
+    "name": "Processus de dépôt et expédition de colis",
+    "isExecutable": true,
+    "documentation": "Processus de dépôt et expédition de colis par un client et un agent."
+  },
+  "pools": [
+    {
+      "id": "pool_client",
+      "name": "Client",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "pool_agent",
+      "name": "Agent",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_depot",
+      "name": "Début du processus de dépôt et expédition de colis",
+      "type": "startEvent",
+      "poolId": "pool_client",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_deposer_colis",
+      "name": "Déposer un colis",
+      "type": "task",
+      "poolId": "pool_client",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_scanner_colis",
+      "name": "Scanner le colis",
+      "type": "task",
+      "poolId": "pool_agent",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_agent' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_poider_colis",
+      "name": "Peser le colis",
+      "type": "task",
+      "poolId": "pool_agent",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "task_expedier_colis",
+      "name": "Expédier le colis",
+      "type": "task",
+      "poolId": "pool_agent",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_event_fin",
+      "name": "Fin du processus d'expédition",
+      "type": "endEvent",
+      "poolId": "pool_agent",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_pool_agent",
+      "name": "Start Agent",
+      "type": "startEvent",
+      "poolId": "pool_agent"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_deposer",
+      "type": "sequenceFlow",
+      "source": "start_event_depot",
+      "target": "task_deposer_colis",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_deposer_scanner",
+      "name": "Colis déposé",
+      "type": "messageFlow",
+      "source": "task_deposer_colis",
+      "target": "task_scanner_colis",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_scanner_poider",
+      "type": "sequenceFlow",
+      "source": "task_scanner_colis",
+      "target": "task_poider_colis",
+      "sourceProcessElement": "relation_003_mod"
+    },
+    {
+      "id": "flow_poider_expedier",
+      "type": "sequenceFlow",
+      "source": "task_poider_colis",
+      "target": "task_expedier_colis",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_expedier_fin",
+      "type": "sequenceFlow",
+      "source": "task_expedier_colis",
+      "target": "end_event_fin"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_pool_agent",
+      "target": "task_scanner_colis"
+    }
+  ]
+}

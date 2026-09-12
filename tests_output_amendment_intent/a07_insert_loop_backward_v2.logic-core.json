@@ -1,0 +1,169 @@
+{
+  "process": {
+    "id": "process_publishing",
+    "name": "Processus de publication d'article",
+    "documentation": "Processus de soumission, relecture et publication d'un article par un auteur et un éditeur."
+  },
+  "pools": [
+    {
+      "id": "author_pool",
+      "name": "Auteur",
+      "lanes": [],
+      "collapsed": false
+    },
+    {
+      "id": "editor_pool",
+      "name": "Éditeur",
+      "lanes": [],
+      "collapsed": false
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event_submission",
+      "name": "Soumission de l'article",
+      "type": "startEvent",
+      "poolId": "author_pool",
+      "documentation": "Déclenchement du processus par la soumission de l'article par l'auteur. GAP: connexion automatique de secours — assigné automatiquement au pool 'author_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "task_submit_article",
+      "name": "Soumet un article",
+      "type": "task",
+      "poolId": "author_pool",
+      "documentation": "L'auteur soumet un article pour publication.",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_editor_review",
+      "name": "Relit l'article",
+      "type": "task",
+      "poolId": "editor_pool",
+      "documentation": "L'éditeur relit l'article soumis par l'auteur. GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'editor_pool' ; cohérence métier non garantie, à vérifier.",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_correct_article",
+      "name": "Corrige l'article",
+      "type": "task",
+      "poolId": "author_pool",
+      "documentation": "L'auteur corrige les erreurs identifiées par l'éditeur."
+    },
+    {
+      "id": "task_submit_article_again",
+      "name": "Resoummet l'article",
+      "type": "task",
+      "poolId": "author_pool",
+      "documentation": "L'auteur resoummet l'article corrigé pour une nouvelle relecture."
+    },
+    {
+      "id": "gateway_review_errors",
+      "type": "exclusiveGateway",
+      "name": "Erreurs détectées ?",
+      "gatewayDirection": "diverging",
+      "poolId": "editor_pool"
+    },
+    {
+      "id": "task_publish_article",
+      "name": "Publie l'article",
+      "type": "task",
+      "poolId": "editor_pool",
+      "documentation": "L'éditeur publie l'article après relecture.",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "end_event_published",
+      "name": "Article publié",
+      "type": "endEvent",
+      "poolId": "editor_pool",
+      "documentation": "Fin du processus après publication de l'article. GAP: connexion automatique de secours — assigné automatiquement au pool 'editor_pool' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "start_editor_pool",
+      "name": "Start Éditeur",
+      "type": "startEvent",
+      "poolId": "editor_pool"
+    },
+    {
+      "id": "gateway_review_errors_notify",
+      "type": "task",
+      "name": "Transmettre : Erreurs détectées",
+      "poolId": "editor_pool",
+      "documentation": "GAP: connexion automatique de secours — tâche relais insérée automatiquement entre le gateway 'gateway_review_errors' et la pool 'author_pool' : un gateway ne peut jamais porter directement un messageFlow inter-pool (cf. section 10.7 de SKILL.md). ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_to_submit",
+      "type": "sequenceFlow",
+      "source": "start_event_submission",
+      "target": "task_submit_article",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_submit_to_review",
+      "type": "messageFlow",
+      "source": "task_submit_article",
+      "target": "task_editor_review",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_review_to_gateway",
+      "type": "sequenceFlow",
+      "source": "task_editor_review",
+      "target": "gateway_review_errors",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_review_to_publish",
+      "type": "sequenceFlow",
+      "source": "gateway_review_errors",
+      "target": "task_publish_article",
+      "name": "Pas d'erreurs",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_review_to_correct",
+      "type": "sequenceFlow",
+      "source": "gateway_review_errors",
+      "target": "gateway_review_errors_notify",
+      "name": "Erreurs détectées",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_correct_to_submit_again",
+      "type": "sequenceFlow",
+      "source": "task_correct_article",
+      "target": "task_submit_article_again",
+      "sourceProcessElement": "relation_007"
+    },
+    {
+      "id": "flow_submit_again_to_review",
+      "type": "messageFlow",
+      "source": "task_submit_article_again",
+      "target": "task_editor_review",
+      "sourceProcessElement": "relation_008"
+    },
+    {
+      "id": "flow_publish_to_end",
+      "type": "sequenceFlow",
+      "source": "task_publish_article",
+      "target": "end_event_published",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_1",
+      "type": "sequenceFlow",
+      "source": "start_editor_pool",
+      "target": "task_editor_review"
+    },
+    {
+      "id": "flow_review_to_correct_msg",
+      "source": "gateway_review_errors_notify",
+      "target": "task_correct_article",
+      "type": "messageFlow"
+    }
+  ]
+}

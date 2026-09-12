@@ -1,0 +1,180 @@
+{
+  "process": {
+    "id": "process_evaluation_projet",
+    "name": "Évaluation et approbation de projet",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_comite",
+      "name": "Comité d'évaluation"
+    },
+    {
+      "id": "pool_demandeur",
+      "name": "Demandeur du projet"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_event",
+      "type": "startEvent",
+      "name": "Début de l'évaluation du projet",
+      "eventDefinition": "none",
+      "poolId": "pool_demandeur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_demandeur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_soumission_projet",
+      "type": "task",
+      "name": "Soumission du projet par le demandeur",
+      "poolId": "pool_demandeur"
+    },
+    {
+      "id": "task_vote_membre1",
+      "type": "task",
+      "name": "Membre 1 vote sur le projet",
+      "poolId": "pool_comite",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_comite' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_vote_membre2",
+      "type": "task",
+      "name": "Membre 2 vote sur le projet",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "task_vote_membre3",
+      "type": "task",
+      "name": "Membre 3 vote sur le projet",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "task_vote_membre4",
+      "type": "task",
+      "name": "Membre 4 vote sur le projet",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "task_vote_membre5",
+      "type": "task",
+      "name": "Membre 5 vote sur le projet",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "gateway_decision_complexe",
+      "type": "complexGateway",
+      "name": "Décision du comité",
+      "gatewayDirection": "converging",
+      "documentation": "Au moins 3 votes favorables sur 5 requis pour l'approbation GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "task_approbation",
+      "type": "task",
+      "name": "Approbation du projet",
+      "poolId": "pool_comite"
+    },
+    {
+      "id": "task_notification_demandeur",
+      "type": "task",
+      "name": "Notification du demandeur",
+      "poolId": "pool_demandeur"
+    },
+    {
+      "id": "end_event_approve",
+      "type": "endEvent",
+      "name": "Projet approuvé",
+      "eventDefinition": "none",
+      "poolId": "pool_demandeur",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_demandeur' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "end_event_reject",
+      "type": "endEvent",
+      "name": "Projet rejeté",
+      "eventDefinition": "none",
+      "poolId": "pool_comite",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_comite' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "start_pool_comite",
+      "type": "startEvent",
+      "name": "Start Comité d'évaluation",
+      "poolId": "pool_comite"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_soumission",
+      "source": "start_event",
+      "target": "task_soumission_projet",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_soumission_vote1",
+      "source": "task_soumission_projet",
+      "target": "task_vote_membre1",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_vote1_vote2",
+      "source": "task_vote_membre1",
+      "target": "task_vote_membre2",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_vote2_vote3",
+      "source": "task_vote_membre2",
+      "target": "task_vote_membre3",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_vote3_vote4",
+      "source": "task_vote_membre3",
+      "target": "task_vote_membre4",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_vote4_vote5",
+      "source": "task_vote_membre4",
+      "target": "task_vote_membre5",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_vote5_decision",
+      "source": "task_vote_membre5",
+      "target": "gateway_decision_complexe",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_decision_approbation",
+      "source": "gateway_decision_complexe",
+      "target": "task_approbation",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_approbation_notification",
+      "source": "task_approbation",
+      "target": "task_notification_demandeur",
+      "type": "messageFlow"
+    },
+    {
+      "id": "flow_notification_approve",
+      "source": "task_notification_demandeur",
+      "target": "end_event_approve",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_decision_reject",
+      "source": "gateway_decision_complexe",
+      "target": "end_event_reject",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_comite",
+      "target": "task_vote_membre1",
+      "type": "sequenceFlow"
+    }
+  ]
+}

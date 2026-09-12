@@ -1,0 +1,170 @@
+{
+  "process": {
+    "id": "process_recrutement",
+    "name": "Processus de recrutement",
+    "isExecutable": true,
+    "documentation": "Processus de recrutement impliquant un candidat et un recruteur. Débuté par la candidature, suivi par un entretien, un compte-rendu et une vérification des références."
+  },
+  "pools": [
+    {
+      "id": "pool_recrutement",
+      "name": "Processus de recrutement",
+      "lanes": [
+        {
+          "id": "lane_candidat",
+          "name": "Candidat"
+        },
+        {
+          "id": "lane_recruteur",
+          "name": "Recruteur"
+        },
+        {
+          "id": "lane_rh",
+          "name": "Service RH"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_recrutement",
+      "name": "Début du processus de recrutement",
+      "type": "startEvent",
+      "poolId": "pool_recrutement",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_recrutement' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_entretien",
+      "name": "Passer un entretien",
+      "type": "task",
+      "laneId": "lane_candidat",
+      "poolId": "pool_recrutement",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_compte_rendu",
+      "name": "Rédiger un compte-rendu",
+      "type": "task",
+      "laneId": "lane_recruteur",
+      "poolId": "pool_recrutement",
+      "sourceProcessElement": "activity_2"
+    },
+    {
+      "id": "task_verification_ref",
+      "name": "Vérifier les références du candidat",
+      "type": "task",
+      "laneId": "lane_rh",
+      "poolId": "pool_recrutement"
+    },
+    {
+      "id": "gateway_parallel",
+      "type": "parallelGateway",
+      "name": "Actions parallèles",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_recrutement"
+    },
+    {
+      "id": "gateway_join",
+      "type": "parallelGateway",
+      "name": "Convergence des actions parallèles",
+      "gatewayDirection": "converging",
+      "poolId": "pool_recrutement"
+    },
+    {
+      "id": "end_recrutement",
+      "name": "Fin du processus de recrutement",
+      "type": "endEvent",
+      "poolId": "pool_recrutement",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_recrutement' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier.",
+      "eventDefinition": "none"
+    },
+    {
+      "id": "task_entretien_gw",
+      "type": "parallelGateway",
+      "name": "task_entretien branch",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_recrutement",
+      "documentation": "GAP: connexion automatique de secours — assigné automatiquement au pool 'pool_recrutement' (aucun poolId fourni par la génération) ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "task_compte_rendu_2",
+      "name": "Rédiger un compte-rendu",
+      "type": "task",
+      "laneId": "lane_recruteur",
+      "poolId": "pool_recrutement",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — nœud dédoublé automatiquement : atteint depuis le gateway 'task_entretien_gw', non lié au gateway d'origine de 'task_compte_rendu' — fusion erronée probable de deux mentions textuelles distinctes (cf. section 2 de SKILL.md). ; cohérence métier non garantie, à vérifier."
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_entretien",
+      "type": "sequenceFlow",
+      "source": "start_recrutement",
+      "target": "task_entretien",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_compte_rendu_gateway",
+      "type": "sequenceFlow",
+      "source": "task_compte_rendu",
+      "target": "gateway_join",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_verification_ref_gateway",
+      "type": "sequenceFlow",
+      "source": "task_verification_ref",
+      "target": "gateway_join",
+      "sourceProcessElement": "relation_004"
+    },
+    {
+      "id": "flow_gateway_join_end",
+      "type": "sequenceFlow",
+      "source": "gateway_join",
+      "target": "end_recrutement",
+      "sourceProcessElement": "relation_005"
+    },
+    {
+      "id": "flow_gateway_split_compte_rendu",
+      "type": "sequenceFlow",
+      "source": "gateway_parallel",
+      "target": "task_compte_rendu",
+      "sourceProcessElement": "relation_006"
+    },
+    {
+      "id": "flow_gateway_split_verification_ref",
+      "type": "sequenceFlow",
+      "source": "gateway_parallel",
+      "target": "task_verification_ref",
+      "sourceProcessElement": "relation_007"
+    },
+    {
+      "id": "flow_1",
+      "source": "task_entretien",
+      "target": "task_entretien_gw",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_2",
+      "source": "task_entretien_gw",
+      "target": "gateway_parallel",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_3",
+      "source": "task_entretien_gw",
+      "target": "task_compte_rendu_2",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_compte_rendu_gateway_task_compte_rendu_2",
+      "type": "sequenceFlow",
+      "source": "task_compte_rendu_2",
+      "target": "gateway_join",
+      "sourceProcessElement": "relation_003"
+    }
+  ]
+}

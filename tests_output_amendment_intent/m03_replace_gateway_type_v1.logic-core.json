@@ -1,0 +1,148 @@
+{
+  "process": {
+    "id": "process_problem_resolution",
+    "name": "Gestion des problèmes signalés par un locataire",
+    "documentation": "Processus de gestion des problèmes signalés par un locataire, incluant l'évaluation de la nature du problème et l'envoi d'un technicien spécialisé (plombier ou électricien).",
+    "isExecutable": true
+  },
+  "pools": [
+    {
+      "id": "pool_tenant",
+      "name": "Locataire",
+      "collapsed": false
+    },
+    {
+      "id": "pool_problem_management",
+      "name": "Service de gestion des problèmes",
+      "lanes": [
+        {
+          "id": "lane_plumbing",
+          "name": "Plomberie"
+        },
+        {
+          "id": "lane_electricity",
+          "name": "Électricité"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start_problem_signal",
+      "type": "startEvent",
+      "name": "Problème signalé par le locataire",
+      "eventDefinition": "none",
+      "poolId": "pool_tenant",
+      "sourceProcessElement": "event_1"
+    },
+    {
+      "id": "task_signal_problem",
+      "type": "task",
+      "name": "Signaler un problème dans le logement",
+      "poolId": "pool_tenant",
+      "sourceProcessElement": "activity_1"
+    },
+    {
+      "id": "task_evaluate_problem",
+      "type": "task",
+      "name": "Vérifier la nature du problème",
+      "poolId": "pool_problem_management",
+      "sourceProcessElement": "activity_2",
+      "documentation": "GAP: connexion automatique de secours — rattaché automatiquement au flux interne du pool 'pool_problem_management' ; cohérence métier non garantie, à vérifier."
+    },
+    {
+      "id": "gateway_problem_type",
+      "type": "inclusiveGateway",
+      "name": "Type de problème",
+      "gatewayDirection": "diverging",
+      "poolId": "pool_problem_management",
+      "sourceProcessElement": "condition_1, condition_2"
+    },
+    {
+      "id": "task_send_plumber",
+      "type": "task",
+      "name": "Envoyer un plombier",
+      "poolId": "pool_problem_management",
+      "laneId": "lane_plumbing",
+      "sourceProcessElement": "activity_3"
+    },
+    {
+      "id": "task_send_electrician",
+      "type": "task",
+      "name": "Envoyer un électricien",
+      "poolId": "pool_problem_management",
+      "laneId": "lane_electricity",
+      "sourceProcessElement": "activity_4"
+    },
+    {
+      "id": "end_problem_resolved",
+      "type": "endEvent",
+      "name": "Problème résolu",
+      "eventDefinition": "none",
+      "poolId": "pool_problem_management"
+    },
+    {
+      "id": "start_pool_problem_management",
+      "type": "startEvent",
+      "name": "Start Service de gestion des problèmes",
+      "poolId": "pool_problem_management"
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow_start_signal",
+      "source": "start_problem_signal",
+      "target": "task_signal_problem",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_001"
+    },
+    {
+      "id": "flow_signal_evaluate",
+      "source": "task_signal_problem",
+      "target": "task_evaluate_problem",
+      "type": "messageFlow",
+      "sourceProcessElement": "relation_002"
+    },
+    {
+      "id": "flow_evaluate_gateway",
+      "source": "task_evaluate_problem",
+      "target": "gateway_problem_type",
+      "type": "sequenceFlow",
+      "sourceProcessElement": "relation_003"
+    },
+    {
+      "id": "flow_plumbing_plumber",
+      "source": "gateway_problem_type",
+      "target": "task_send_plumber",
+      "type": "sequenceFlow",
+      "name": "Problème de plomberie",
+      "sourceProcessElement": "condition_1"
+    },
+    {
+      "id": "flow_electricity_electrician",
+      "source": "gateway_problem_type",
+      "target": "task_send_electrician",
+      "type": "sequenceFlow",
+      "name": "Problème d'électricité",
+      "sourceProcessElement": "condition_2"
+    },
+    {
+      "id": "flow_plumber_end",
+      "source": "task_send_plumber",
+      "target": "end_problem_resolved",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_electrician_end",
+      "source": "task_send_electrician",
+      "target": "end_problem_resolved",
+      "type": "sequenceFlow"
+    },
+    {
+      "id": "flow_1",
+      "source": "start_pool_problem_management",
+      "target": "task_evaluate_problem",
+      "type": "sequenceFlow"
+    }
+  ]
+}
