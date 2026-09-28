@@ -1,6 +1,7 @@
 """Appels Mistral pour comprendre un processus et produire son Logic-Core."""
 from __future__ import annotations
 
+import functools
 import json
 import os
 import re
@@ -29,16 +30,26 @@ load_dotenv()
 ROOT = Path(__file__).parent.parent
 
 
+@functools.lru_cache(maxsize=8)
 def _load_json_schema(filename: str) -> dict[str, Any]:
 	return json.loads((ROOT / "schema" / filename).read_text(encoding="utf-8"))
 
 
+@functools.lru_cache(maxsize=1)
 def _skill_prompt() -> str:
+	# Lu une seule fois par process : ce fichier (~95 Ko) est envoyé comme system
+	# prompt sur CHAQUE appel LLM (génération, jusqu'à 5 tentatives de self-healing,
+	# amendement) — le relire à chaque fois n'était qu'un I/O disque redondant.
 	path = ROOT / "SKILL.md"
 	return path.read_text(encoding="utf-8") if path.exists() else "Expert BPMN 2.0."
 
 
+@functools.lru_cache(maxsize=8)
 def _get_mistral_client(api_key: str | None = None) -> Any:
+	# Caché par clé API : un pipeline enchaîne plusieurs appels séquentiels
+	# (génération + self-healing x N) et reconstruire un client à chaque fois
+	# jetait la connexion HTTP keep-alive du précédent, forçant une nouvelle
+	# poignée de main TCP/TLS avec l'API Mistral à chaque tentative.
 	key = api_key or os.getenv("MISTRAL_API_KEY")
 	if not key:
 		raise ValueError("La variable d'environnement MISTRAL_API_KEY est manquante.")
@@ -713,6 +724,12 @@ def generate_logic_core_from_pd(process_desc: dict[str, Any], run_id: str | None
 		"et ajoute sourceProcessElement lorsqu'un élément provient d'un élément Process Description. "
 		"ou nécessaire à la structure BPMN. Ne mets aucune coordonnée, dimension ou waypoint. "
 		"Réponds uniquement en JSON.\n\n"
+		"Deux pièges très fréquents à vérifier avant de répondre : "
+		"(1) un Data Object/Data Store n'est JAMAIS relié par sequenceFlow ni messageFlow, uniquement "
+		"par 'association' (ou 'dataInputAssociation'/'dataOutputAssociation') ; "
+		"(2) un sequenceFlow ne relie JAMAIS deux nœuds de pools différents — toute communication "
+		"entre deux pools est un messageFlow, avec un startEvent dédié dans le pool destinataire s'il "
+		"n'en a pas déjà un pour recevoir ce message.\n\n"
 		f"Process Description:\n{json.dumps(process_desc, ensure_ascii=False)}"
 	)
 	messages = [{"role": "system", "content": _skill_prompt()}, {"role": "user", "content": prompt}]
@@ -1113,6 +1130,25 @@ def self_heal_logic_core(faulty_logic_core: dict[str, Any], validation_errors: l
 			"tâche intermédiaire dans le pool du gateway (ex: 'Transmettre la décision'), relie le gateway à "
 			"cette tâche par sequenceFlow, puis fais porter le messageFlow SUR cette tâche intermédiaire vers "
 			"la tâche de l'autre pool — jamais directement depuis/vers le gateway lui-même."
+		)
+	if any("Utilisez un 'messageFlow'" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction (POOL-001) : un sequenceFlow ne peut JAMAIS relier deux nœuds de pools "
+			"différents. Deux options : (a) si les deux tâches sont en réalité exécutées par le même acteur, "
+			"corrige le poolId/laneId de l'une des deux pour qu'elles rejoignent le même pool (sequenceFlow "
+			"inchangé) ; (b) sinon, change le 'type' de ce flux en 'messageFlow', et si le pool destinataire "
+			"n'a pas encore de point d'entrée pour cette communication, ajoute-y un startEvent (typé "
+			"eventDefinition='message' si le texte décrit un déclenchement explicite par message, sinon un "
+			"startEvent simple) qui reçoit ce messageFlow et enchaîne en sequenceFlow vers la suite du flux "
+			"de ce pool — conserve tous les IDs existants."
+		)
+	if any("touche l'artefact" in err and "Data Object/Data Store" in err for err in validation_errors):
+		prompt += (
+			"\nRappel de correction : ce flux relie une tâche à un Data Object/Data Store — un artefact ne "
+			"circule JAMAIS par sequenceFlow ni messageFlow. Change son 'type' en 'association' (ou "
+			"'dataInputAssociation' si l'artefact est lu en entrée par la tâche, 'dataOutputAssociation' "
+			"s'il est produit en sortie), retire tout 'condition'/'name' de flux de contrôle porté par cette "
+			"arête, et laisse inchangé le sequenceFlow qui relie les tâches réelles entre elles."
 		)
 	# Rappels pour les erreurs de validate_amendment_diff (étape [D]) : ce sont des écarts entre
 	# ce qui a été DEMANDÉ (intention classifiée en [A]) et ce qui a été RÉELLEMENT produit, pas

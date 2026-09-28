@@ -9,22 +9,35 @@ définies dans validate.py plutôt que de les redéfinir.
 """
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from validate import ACTIVITY_TYPES, GATEWAY_TYPES
 
-# Les messages d'erreur de validate.py sont déjà rédigés en français
-# explicatif ; seuls les préfixes techniques (codes de règle, préfixe de
-# schéma JSON) ont besoin d'être retirés pour un affichage utilisateur — pas
-# besoin d'un dictionnaire de traduction complet pour chaque message.
-_TECHNICAL_PREFIX_RE = re.compile(r"^(SCHEMA[^:]*:|[A-Z][A-Z-]*-\d+:)\s*")
+# Message affiché au client en cas d'échec de validation : volontairement
+# générique et identique quel que soit le détail technique de l'erreur (ids de
+# nœuds/pools, codes de règle POOL-001/GATEWAY-002, références SKILL.md...).
+# Un client final ne doit jamais lire ce vocabulaire interne ni avoir
+# l'impression que l'outil est en tort — le message pointe vers ce QUE LUI
+# peut préciser dans sa description, jamais vers un détail d'implémentation.
+# Les erreurs brutes restent disponibles via errors_technical (jamais affiché
+# par le frontend, cf. static/app.js) pour le support/debug uniquement.
+_GENERIC_FAILURE_MESSAGE = (
+    "Nous n'avons pas réussi à générer un schéma fiable à partir de cette demande. "
+    "Cela arrive le plus souvent quand certaines étapes, certains acteurs ou certaines "
+    "conditions restent implicites dans le texte. Essayez de préciser qui fait quoi, dans "
+    "quel ordre, et ce qui se passe dans les cas particuliers (erreurs, délais, exceptions), "
+    "puis relancez la génération.Donner une autre chance à l'agent Merci."
+)
 
-
-def _humanize_error(message: str) -> str:
-    """Retire le préfixe technique éventuel (ex: 'SCHEMA nodes[2]:', 'GATEWAY-002:',
-    'POOL-001:') d'un message d'erreur de validate.py."""
-    return _TECHNICAL_PREFIX_RE.sub("", message).strip()
+# Note générique ajoutée au message de succès quand le validateur a dû
+# compléter automatiquement certains détails de structure (GAP ou autre
+# avertissement) — jamais le détail brut (ids de nœuds/pools, ni référence
+# SKILL.md) : seule la présence ou l'absence d'avertissements compte pour le
+# client, pas leur contenu technique.
+_GENERIC_WARNING_NOTE = (
+    "Quelques connexions mineures ont été complétées automatiquement pour obtenir un "
+    "schéma exploitable — nous vous recommandons de relire le résultat généré."
+)
 
 
 def _pool_names(logic_core: dict[str, Any]) -> list[str]:
@@ -110,12 +123,11 @@ def _format_success_message(summary: dict[str, Any]) -> str:
 
 
 def _format_failure_message(errors: list[str]) -> str:
-    humanized = [_humanize_error(e) for e in errors]
-    n = len(humanized)
-    suffix = "s" if n != 1 else ""
-    intro = f"Le schéma généré contient {n} problème{suffix} à corriger :"
-    bullet_list = "\n".join(f"- {msg}" for msg in humanized)
-    return f"{intro}\n{bullet_list}"
+    # `errors` n'influence plus le texte affiché : voir _GENERIC_FAILURE_MESSAGE.
+    # Toujours accepté en paramètre pour que errors_technical (destiné au
+    # support/debug, jamais affiché côté client) reste calculé normalement.
+    del errors
+    return _GENERIC_FAILURE_MESSAGE
 
 
 def format_result(
@@ -146,7 +158,7 @@ def format_result(
         summary = _build_summary(logic_core)
         message = _format_success_message(summary)
         if warnings:
-            message += "\n\nAvertissements : " + " ".join(warnings)
+            message += "\n\n" + _GENERIC_WARNING_NOTE
         return {"message": message, "summary": summary, "errors_technical": None, "warnings": warnings}
 
     return {

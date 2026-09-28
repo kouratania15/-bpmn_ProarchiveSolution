@@ -1692,6 +1692,41 @@ def _fix_gateway_pool_crossing_edges(
             )
 
 
+def _fix_artifact_touched_by_flow(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    seq_edges: list[dict[str, Any]],
+) -> None:
+    """Un Data Object/Data Store (ARTIFACT_TYPES) ne circule JAMAIS par
+    sequenceFlow ni messageFlow, uniquement par association — cf.
+    _check_data_object_flow_type, section 5 de SKILL.md. Même principe que
+    _fix_gateway_pool_crossing_edges : le rappel de self-healing correspondant
+    (llm_agent.py) n'est qu'un texte explicatif, pas une garantie de
+    convergence en une seule tentative ; rendu structurellement impossible ici.
+    La direction du flux fautif détermine le sous-type : l'artefact en source
+    devient un dataInputAssociation (la tâche LIT la donnée), l'artefact en
+    cible un dataOutputAssociation (la tâche ÉCRIT la donnée) — purement
+    informatif, bpmn_xml.py sérialise les trois sous-types en <bpmn:association>
+    de façon identique, donc aucun risque de sens inversé dans le XML produit."""
+    artifact_ids = {
+        n.get("id") for n in nodes
+        if isinstance(n, dict) and n.get("type") in ARTIFACT_TYPES and isinstance(n.get("id"), str)
+    }
+    if not artifact_ids:
+        return
+    for e in list(edges):
+        if not isinstance(e, dict) or e.get("type") not in ("sequenceFlow", "messageFlow", None):
+            continue
+        src, tgt = e.get("source"), e.get("target")
+        if src not in artifact_ids and tgt not in artifact_ids:
+            continue
+        e["type"] = "dataInputAssociation" if src in artifact_ids else "dataOutputAssociation"
+        e.pop("condition", None)
+        e.pop("isDefault", None)
+        if e in seq_edges:
+            seq_edges.remove(e)
+
+
 def _remove_boundary_event_reboop_to_own_host(
     edges: list[dict[str, Any]],
     seq_edges: list[dict[str, Any]],
@@ -3017,6 +3052,10 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
     # d'une tâche relais dans la pool du gateway. ---
     _fix_gateway_pool_crossing_edges(nodes, node_map, edges, seq_edges, pools)
 
+    # --- Réparation mécanique d'un artefact (Data Object/Data Store) relié par
+    # sequenceFlow ou messageFlow : jamais valide, converti en association. ---
+    _fix_artifact_touched_by_flow(nodes, edges, seq_edges)
+
     # --- Suppression mécanique d'un flux de boundaryEvent qui reboucle vers sa
     # propre tâche hôte, AVANT toute passe de dédoublement/gateway : cette arête
     # est TOUJOURS erronée (un boundary event ouvre une branche latérale, jamais
@@ -3086,7 +3125,19 @@ def normalize_logic_core_graph(logic_core: dict[str, Any], source_text: str | No
         if isinstance(src, str) and isinstance(dst, str) and src_pool and dst_pool and src_pool != dst_pool:
             src_node = node_map.get(src)
             dst_node = node_map.get(dst)
-            if src_node and src_node.get("type") in ("startEvent", "boundaryEvent"):
+            # NB : exclure aussi les startEvent ici serait une régression connue —
+            # c'est justement le cas le plus fréquent (le startEvent d'un pool
+            # séquence directement une tâche d'un AUTRE pool) et celui que cette
+            # passe de sécurité finale doit précisément rattraper si la 1ère passe
+            # (plus haut dans cette fonction) l'a laissé passer : sans ce
+            # rattrapage, ce cas précis survivait tel quel jusqu'à
+            # validate_logic_core, qui ne le signalait qu'au self-healing LLM —
+            # lequel ne convergeait de façon fiable qu'après 1-2 tentatives
+            # (observé en usage réel sur un scénario à 5 pools). _ensure_full_connectivity,
+            # déjà exécuté avant cette passe, traite un nœud cible de messageFlow
+            # comme un point d'entrée légitime : aucun rattachement supplémentaire
+            # n'est nécessaire après cette conversion.
+            if src_node and src_node.get("type") == "boundaryEvent":
                 continue
             # Un gateway ne peut jamais être un point de communication valide : le
             # convertir silencieusement en messageFlow produirait une arête invalide

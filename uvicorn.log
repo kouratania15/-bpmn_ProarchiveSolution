@@ -4,3 +4,5 @@ INFO:     Started reloader process [31460] using WatchFiles
 INFO:     Started server process [23532]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'scripts\bpmn_xml.py'. Reloading...
+ 

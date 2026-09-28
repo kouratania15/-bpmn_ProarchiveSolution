@@ -28,9 +28,11 @@ experiment.json
 ANALYSIS_REPORT.md
 debug_*.json
 debug_*.txt
+/*.log
 
 # --- Editeur / OS ---
 .vscode/
+
 .idea/
 .claude/
 Thumbs.db

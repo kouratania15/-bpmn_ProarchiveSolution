@@ -30,13 +30,11 @@ EVENT_DEF_TAGS = {
     "link": "linkEventDefinition",
     "cancel": "cancelEventDefinition",
 }
-
 LOOP_CHARACTERISTICS_TAGS = {
     "multiInstanceParallel": ('bpmn:multiInstanceLoopCharacteristics', ' isSequential="false"'),
     "multiInstanceSequential": ('bpmn:multiInstanceLoopCharacteristics', ' isSequential="true"'),
     "standardLoop": ('bpmn:standardLoopCharacteristics', ''),
 }
-
 
 def _emit_loop_characteristics(lines: list[str], node: dict[str, Any], indent: str) -> None:
     """Émet le marqueur de boucle (multi-instance parallèle/séquentiel ou boucle
