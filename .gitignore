@@ -13,6 +13,7 @@ __pycache__/
 venv/
 .venv/
 
+
 # --- Sorties / fichiers générés ---
 out/
 logs/
@@ -29,7 +30,9 @@ ANALYSIS_REPORT.md
 debug_*.json
 debug_*.txt
 /*.log
-
+uvicorn.pid
+uvicorn.log
+run_versioning_tests.py
 # --- Editeur / OS ---
 .vscode/
 
